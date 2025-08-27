@@ -75,7 +75,7 @@
                 try {
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: password });
                     if (error) throw error;
-                    window.location.href = './admin/menu/menu.html'; 
+                    window.location.href = './menu.html'; 
                 } catch (error) {
                     if (error.message === 'Invalid login credentials') {
                         alert('E-mail ou senha inválidos. Por favor, tente novamente.');
