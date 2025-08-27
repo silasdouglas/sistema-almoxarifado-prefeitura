@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle de Estoque</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --background-color: #f4f7f9;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --text-color-light: #6c757d;
+            --border-color: #e0e0e0;
+            --positive-color: #28a745;
+            --zero-color: #ffc107;
+            --negative-color: #dc3545;
+            --action-color: #28a745; 
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            color: var(--text-color);
+        }
+        
+        .dashboard-wrapper {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+        .dashboard-header h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        
+        .controls-container {
+            display: block;
+            margin-bottom: 20px;
+        }
+        .filter-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .filter-group label {
+            font-size: 0.9em;
+            color: var(--text-color-light);
+            font-weight: 500;
+        }
+        .filter-group input[type="date"] {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: 'Roboto', sans-serif;
+            height: 21px;
+        }
+        
+        .dropdown-container {
+            position: relative;
+        }
+        .dropdown-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+            user-select: none;
+            width: 200px;
+            text-align: left;
+            font-family: 'Roboto', sans-serif;
+            font-size: 1em;
+        }
+        .dropdown-toggle span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            box-sizing: border-box;
+            z-index: 1000;
+            background-color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-top: 4px;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .dropdown-menu.show { display: block; }
+        .checkbox-item { display: flex; align-items: center; margin-bottom: 5px; }
+        .checkbox-item label { font-weight: normal; color: var(--text-color); cursor: pointer; margin-left: 5px; font-size: 0.95em; }
+        
+        .filter-buttons, .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 3px;
+        }
+        .action-buttons {
+            margin-left: auto;
+        }
+        .filter-buttons button, .action-buttons button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .btn-action { background-color: var(--action-color); color: white; }
+        .btn-action:hover { background-color: #218838; }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        .indicators-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+        .data-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        .card {
+            background-color: var(--card-bg-color);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s ease-in-out;
+            border: 2px solid transparent;
+        }
+        
+        .card h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.1em;
+            color: var(--text-color);
+            flex-shrink: 0;
+        }
+        
+        .indicator-card { align-items: center; justify-content: center; padding: 15px; }
+        .indicator-card h3 { margin: 0; color: #555; font-size: 0.9em; font-weight: 500; display: flex; align-items: center; text-align: center; }
+        .indicator-value { font-size: 2.2em; font-weight: bold; margin-top: 8px; }
+
+        .indicator-card[data-filter] {
+            cursor: pointer;
+        }
+        .indicator-card[data-filter]:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .indicator-card.active-filter {
+            border-color: var(--primary-color);
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+
+        #total-itens-valor, #total-skus-valor { color: var(--primary-color); }
+        #total-positivo-valor { color: var(--positive-color); }
+        #total-zerado-valor { color: var(--zero-color); }
+        #total-negativo-valor { color: var(--negative-color); }
+        
+        .tooltip-icon { font-size: 16px; color: var(--text-color-light); margin-left: 8px; cursor: help; }
+
+        .table-container { 
+            overflow: auto;
+            max-height: 300px;
+        }
+        .table-container table { width: 100%; border-collapse: collapse; }
+        .table-container th, .table-container td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); text-align: left; vertical-align: middle; white-space: nowrap; }
+        .text-center { text-align: center; }
+        .table-container th { 
+            background-color: #f8f9fa; 
+            font-weight: 500; 
+            position: sticky; 
+            top: 0; 
+        }
+        .table-container th.sortable { cursor: pointer; user-select: none; }
+        .table-container th.sortable:hover { background-color: #e9ecef; }
+        .sort-icon { font-size: 16px; vertical-align: middle; opacity: 0.6; margin-left: 5px; }
+        
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        .chart-canvas-wrapper { position: relative; width: 100%; height: 100%; }
+        
+        @media (min-width: 992px) {
+            .data-row { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* [ATUALIZADO] Regras de Impressão Reforçadas */
+        @media print {
+            body, html { 
+                background-color: white !important; 
+                -webkit-print-color-adjust: exact; 
+                color-adjust: exact;
+            }
+            
+            /* [NOVO] Troca o título apenas na impressão */
+            .dashboard-header h1 {
+                visibility: hidden;
+                position: relative;
+            }
+            .dashboard-header h1::after {
+                content: 'Relatório de Estoque';
+                visibility: visible;
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                text-align: center;
+            }
+
+            /* Esconde apenas os botões, mantendo o resto dos controles visível */
+            .filter-buttons, .action-buttons, .dropdown-toggle .material-icons {
+                display: none !important;
+            }
+
+            .dashboard-wrapper { 
+                padding: 0 !important; 
+                box-shadow: none !important; 
+                min-height: auto;
+            }
+            .card { 
+                box-shadow: none !important; 
+                border: 1px solid #ccc !important; 
+                page-break-inside: avoid;
+            }
+
+            /* [NOVO] Força o layout de bloco para garantir a largura total */
+            .data-row { 
+                display: block !important;
+            }
+            .data-row > .card {
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin-bottom: 20px;
+            }
+
+            .table-container, .chart-container { 
+                max-height: none !important; 
+                height: auto !important; 
+                overflow: visible !important;
+                min-height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-wrapper" id="dashboard-to-capture">
+        <header class="dashboard-header">
+            <h1>Painel de Controle de Estoque</h1>
+        </header>
+
+        <div class="controls-container card">
+             <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="start-date">Data de Início</label>
+                    <input type="date" id="start-date">
+                </div>
+                 <div class="filter-group">
+                    <label for="end-date">Data de Fim</label>
+                    <input type="date" id="end-date">
+                </div>
+                <div class="filter-group">
+                    <label>Produtos</label>
+                    <div class="dropdown-container">
+                        <button type="button" class="dropdown-toggle" id="product-filter-toggle">
+                            <span>Selecionar produtos</span>
+                            <i class="material-icons">arrow_drop_down</i>
+                        </button>
+                        <div id="product-filter-container" class="dropdown-menu">
+                             <span style="color: var(--text-color-light);">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-buttons">
+                    <button id="apply-filters-btn" class="btn-primary">Aplicar</button>
+                    <button id="clear-filters-btn" class="btn-secondary">Limpar</button>
+                </div>
+                <div class="action-buttons">
+                    <button id="save-png-btn" class="btn-action"><i class="material-icons">image</i> Salvar PNG</button>
+                    <button id="print-btn" class="btn-action"><i class="material-icons">print</i> Imprimir</button>
+                </div>
+             </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="indicators-row">
+                <div class="card indicator-card"><h3>Total de Itens <span class="tooltip-icon material-icons" title="A soma da quantidade de todas as unidades de produtos.">info_outline</span></h3><div id="total-itens-valor" class="indicator-value">--</div></div>
+                <div class="card indicator-card" data-filter="all"><h3>Produtos (SKUs) <span class="tooltip-icon material-icons" title="A contagem de quantos tipos de produtos únicos estão cadastrados.">info_outline</span></h3><div id="total-skus-valor" class="indicator-value">--</div></div>
+                <div class="card indicator-card" data-filter="positive"><h3>Com Estoque <span class="tooltip-icon material-icons" title="SKUs com quantidade em estoque maior que zero.">info_outline</span></h3><div id="total-positivo-valor" class="indicator-value">--</div></div>
+                <div class="card indicator-card" data-filter="zero"><h3>Sem Estoque <span class="tooltip-icon material-icons" title="SKUs com quantidade em estoque igual a zero.">info_outline</span></h3><div id="total-zerado-valor" class="indicator-value">--</div></div>
+                <div class="card indicator-card" data-filter="negative"><h3>Estoque Negativo <span class="tooltip-icon material-icons" title="SKUs com quantidade em estoque menor que zero (geralmente indica um erro).">info_outline</span></h3><div id="total-negativo-valor" class="indicator-value">--</div></div>
+            </div>
+
+            <div class="data-row">
+                <div class="card table-container">
+                    <h3>Resumo dos Produtos</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-column="descricao">Produto <i class="material-icons sort-icon">unfold_more</i></th>
+                                <th class="sortable text-center" data-column="quantidade_estoque">Quantidade <i class="material-icons sort-icon">unfold_more</i></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="2" style="text-align:center;">Carregando dados...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card chart-container">
+                    <h3>Quantidade em Estoque por Produto</h3>
+                    <div class="chart-canvas-wrapper">
+                        <canvas id="estoqueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Chart.register(ChartDataLabels);
+
+            const SUPABASE_URL = 'https://bixobvseaocmhljckskl.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpeG9idnNlYW9jbWhsamNrc2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTgyNjcsImV4cCI6MjA3MDU5NDI2N30.SjChWwpw3zYPa_lJ5Z4axpDExXHSHdq0_pntpfES2jo';
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            
+            let currentSort = { column: 'descricao', direction: 'asc' };
+            let estoqueChartInstance = null;
+            let dadosCompletosDosProdutos = [];
+
+            const calcularIndicadores = (dados) => {
+                if (!dados || dados.length === 0) { return { totalItens: 0, totalSKUs: 0, totalPositivo: 0, totalZerado: 0, totalNegativo: 0 }; }
+                const totalItens = dados.reduce((sum, produto) => sum + (produto.quantidade_estoque || 0), 0);
+                const totalSKUs = dados.length;
+                const totalPositivo = dados.filter(p => p.quantidade_estoque > 0).length;
+                const totalZerado = dados.filter(p => p.quantidade_estoque === 0).length;
+                const totalNegativo = dados.filter(p => p.quantidade_estoque < 0).length;
+                return { totalItens, totalSKUs, totalPositivo, totalZerado, totalNegativo };
+            };
+
+            const renderizarTabela = (dados) => {
+                dados.sort((a, b) => {
+                    const valA = a[currentSort.column], valB = b[currentSort.column];
+                    if (typeof valA === 'string') { return currentSort.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA); } 
+                    else { return currentSort.direction === 'asc' ? valA - valB : valB - valA; }
+                });
+                const tabelaCorpo = document.querySelector('.table-container tbody');
+                tabelaCorpo.innerHTML = '';
+                if (dados.length === 0) {
+                    tabelaCorpo.innerHTML = '<tr><td colspan="2" style="text-align:center;">Nenhum produto encontrado.</td></tr>';
+                    return;
+                }
+                dados.forEach(p => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${p.descricao}</td><td class="text-center">${p.quantidade_estoque || 0}</td>`;
+                    tabelaCorpo.appendChild(row);
+                });
+            };
+
+            const renderizarDashboard = (dados) => {
+                const indicadores = calcularIndicadores(dados);
+                document.getElementById('total-itens-valor').textContent = indicadores.totalItens;
+                document.getElementById('total-skus-valor').textContent = indicadores.totalSKUs;
+                document.getElementById('total-positivo-valor').textContent = indicadores.totalPositivo;
+                document.getElementById('total-zerado-valor').textContent = indicadores.totalZerado;
+                document.getElementById('total-negativo-valor').textContent = indicadores.totalNegativo;
+                renderizarTabela(dados);
+                renderizarGrafico(dados);
+            };
+
+            const renderizarGrafico = (dados) => {
+                const isMobile = window.innerWidth < 768;
+                const nomesProdutos = dados.map(p => p.descricao.split(' '));
+                const quantidades = dados.map(p => p.quantidade_estoque);
+                
+                const ctx = document.getElementById('estoqueChart').getContext('2d');
+                const chartColors = ['rgba(54, 162, 235, 0.6)', 'rgba(255, 99, 132, 0.6)', 'rgba(255, 206, 86, 0.6)', 'rgba(75, 192, 192, 0.6)', 'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)'];
+                const borderColors = ['rgba(54, 162, 235, 1)', 'rgba(255, 99, 132, 1)', 'rgba(255, 206, 86, 1)', 'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)'];
+
+                if (estoqueChartInstance) estoqueChartInstance.destroy();
+                
+                estoqueChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: nomesProdutos, datasets: [{ data: quantidades, backgroundColor: chartColors, borderColor: borderColors, borderWidth: 1 }] },
+                    options: {
+                        indexAxis: isMobile ? 'y' : 'x', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'end', color: '#555' }, tooltip: { enabled: true } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            };
+            
+            const updateDropdownToggleText = () => {
+                const toggle = document.querySelector('#product-filter-toggle span');
+                const count = document.querySelectorAll('#product-filter-container input:checked').length;
+                if (count === 0) { toggle.textContent = 'Selecionar produtos'; } 
+                else if (count === 1) { toggle.textContent = '1 produto selecionado'; } 
+                else { toggle.textContent = `${count} produtos selecionados`; }
+            };
+            
+            const popularFiltroProdutos = (dados) => {
+                const container = document.getElementById('product-filter-container');
+                container.innerHTML = '';
+                if (dados.length === 0) { container.innerHTML = '<span style="color: var(--text-color-light);">Nenhum produto.</span>'; return; }
+                const produtosUnicos = [...new Set(dados.map(item => item.descricao))];
+                produtosUnicos.forEach(descricao => {
+                    const div = document.createElement('div');
+                    div.className = 'checkbox-item';
+                    const id = `prod-${descricao.replace(/\s+/g, '')}`;
+                    div.innerHTML = `<input type="checkbox" id="${id}" name="produto" value="${descricao}"><label for="${id}">${descricao}</label>`;
+                    container.appendChild(div);
+                    div.querySelector('input').addEventListener('change', updateDropdownToggleText);
+                });
+            };
+
+            const aplicarFiltros = () => {
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+                const produtosSelecionados = Array.from(document.querySelectorAll('#product-filter-container input:checked')).map(cb => cb.value);
+                let dadosFiltrados = [...dadosCompletosDosProdutos];
+                if (startDate && endDate) {
+                    const dataInicio = new Date(startDate);
+                    const dataFim = new Date(endDate);
+                    dataFim.setHours(23, 59, 59, 999);
+                    dadosFiltrados = dadosFiltrados.filter(p => {
+                        if (!p.created_at) return false;
+                        const dataProduto = new Date(p.created_at);
+                        return dataProduto >= dataInicio && dataProduto <= dataFim;
+                    });
+                }
+                if (produtosSelecionados.length > 0) { dadosFiltrados = dadosFiltrados.filter(p => produtosSelecionados.includes(p.descricao)); }
+                
+                document.querySelectorAll('.indicator-card.active-filter').forEach(card => card.classList.remove('active-filter'));
+                renderizarDashboard(dadosFiltrados);
+            };
+
+            const limparFiltros = () => {
+                document.getElementById('start-date').value = '';
+                document.getElementById('end-date').value = '';
+                document.querySelectorAll('#product-filter-container input:checked').forEach(cb => cb.checked = false);
+                updateDropdownToggleText();
+                document.querySelectorAll('.indicator-card.active-filter').forEach(card => card.classList.remove('active-filter'));
+                renderizarDashboard(dadosCompletosDosProdutos);
+            };
+            
+            async function carregarDadosDoSupabase() {
+                const { data, error } = await supabaseClient.from('produtos').select('descricao, quantidade_estoque, created_at').order('descricao', { ascending: true });
+                if (error) { console.error('Erro ao buscar dados:', error); document.querySelector('.table-container tbody').innerHTML = `<tr><td colspan="2" style="color:red;text-align:center;">Falha ao carregar dados.</td></tr>`; return; }
+                dadosCompletosDosProdutos = data;
+                popularFiltroProdutos(dadosCompletosDosProdutos);
+                renderizarDashboard(dadosCompletosDosProdutos);
+            }
+
+            const salvarComoPNG = () => {
+                const dashboardElement = document.getElementById('dashboard-to-capture');
+                const options = { useCORS: true, scale: 2, scrollX: 0, scrollY: 0 };
+                html2canvas(dashboardElement, options).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'dashboard-estoque.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            };
+
+            const imprimirDashboard = () => { window.print(); };
+
+            // --- EVENT LISTENERS ---
+            document.getElementById('apply-filters-btn').addEventListener('click', aplicarFiltros);
+            document.getElementById('clear-filters-btn').addEventListener('click', limparFiltros);
+            document.getElementById('save-png-btn').addEventListener('click', salvarComoPNG);
+            document.getElementById('print-btn').addEventListener('click', imprimirDashboard);
+            
+            const indicatorCards = document.querySelectorAll('.indicator-card[data-filter]');
+            indicatorCards.forEach(card => {
+                card.addEventListener('click', (event) => {
+                    document.getElementById('start-date').value = '';
+                    document.getElementById('end-date').value = '';
+                    document.querySelectorAll('#product-filter-container input:checked').forEach(cb => cb.checked = false);
+                    updateDropdownToggleText();
+
+                    indicatorCards.forEach(c => c.classList.remove('active-filter'));
+                    const clickedCard = event.currentTarget;
+                    clickedCard.classList.add('active-filter');
+
+                    const filterType = clickedCard.dataset.filter;
+                    let dadosFiltrados;
+
+                    switch (filterType) {
+                        case 'positive':
+                            dadosFiltrados = dadosCompletosDosProdutos.filter(p => p.quantidade_estoque > 0);
+                            break;
+                        case 'zero':
+                            dadosFiltrados = dadosCompletosDosProdutos.filter(p => p.quantidade_estoque === 0);
+                            break;
+                        case 'negative':
+                            dadosFiltrados = dadosCompletosDosProdutos.filter(p => p.quantidade_estoque < 0);
+                            break;
+                        case 'all':
+                        default:
+                            dadosFiltrados = dadosCompletosDosProdutos;
+                            break;
+                    }
+                    renderizarDashboard(dadosFiltrados);
+                });
+            });
+
+            document.querySelectorAll('.table-container th.sortable').forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.column;
+                    currentSort.direction = (currentSort.column === column && currentSort.direction === 'asc') ? 'desc' : 'asc';
+                    currentSort.column = column;
+                    document.querySelectorAll('.table-container .sort-icon').forEach(icon => icon.textContent = 'unfold_more');
+                    header.querySelector('.sort-icon').textContent = currentSort.direction === 'asc' ? 'expand_less' : 'expand_more';
+                    
+                    const activeFilterCard = document.querySelector('.indicator-card.active-filter');
+                    if (activeFilterCard) {
+                        const filterType = activeFilterCard.dataset.filter;
+                        let dadosFiltrados;
+                        switch (filterType) {
+                            case 'positive': dadosFiltrados = dadosCompletosDosProdutos.filter(p => p.quantidade_estoque > 0); break;
+                            case 'zero': dadosFiltrados = dadosCompletosDosProdutos.filter(p => p.quantidade_estoque === 0); break;
+                            case 'negative': dadosFiltrados = dadosCompletosDosProdutos.filter(p => p.quantidade_estoque < 0); break;
+                            default: dadosFiltrados = dadosCompletosDosProdutos; break;
+                        }
+                        renderizarDashboard(dadosFiltrados);
+                    } else {
+                        aplicarFiltros(); 
+                    }
+                });
+            });
+            
+            const toggleBtn = document.getElementById('product-filter-toggle');
+            const dropdownMenu = document.getElementById('product-filter-container');
+            toggleBtn.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
+            window.addEventListener('click', (event) => {
+                if (!toggleBtn.contains(event.target) && !dropdownMenu.contains(event.target)) { dropdownMenu.classList.remove('show'); }
+            });
+
+            carregarDadosDoSupabase();
+        });
+    </script>
+</body>
+</html>

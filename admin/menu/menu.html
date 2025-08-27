@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Almoxarifado</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #333;
+            --accent-color: #007bff;
+            --background-color: #f8f9fa;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --text-color-light: #6c757d;
+            --border-color: #dee2e6;
+            /* Adicionada uma cor secundária para o 'Em breve' */
+            --secondary-color: #6c757d; 
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        .page-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .page-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .page-header img {
+            max-height: 80px;
+            margin-bottom: 0px;
+        }
+        .page-header h1 {
+            font-weight: 500;
+            font-size: 2.2em;
+            margin: 0;
+        }
+        .page-header p {
+            font-size: 1.1em;
+            color: var(--text-color-light);
+        }
+        .menu-section h2 {
+            font-weight: 500;
+            font-size: 1.8em;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 40px;
+            margin-bottom: 25px;
+        }
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+        .menu-card {
+            background-color: var(--card-bg-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            text-decoration: none;
+            color: var(--text-color);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+        .menu-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        .menu-card .card-icon {
+            font-size: 48px;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+        .menu-card .card-title {
+            font-size: 1.3em;
+            font-weight: 500;
+            margin: 0 0 10px 0;
+        }
+        .menu-card .card-description {
+            font-size: 0.95em;
+            color: var(--text-color-light);
+            flex-grow: 1; 
+        }
+        
+        .coming-soon {
+            opacity: 0.6;
+            cursor: not-allowed;
+            pointer-events: none; 
+        }
+
+        .coming-soon::after {
+            content: 'Em breve';
+            position: absolute;
+            top: 10px;
+            right: -30px;
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 3px 30px;
+            font-size: 12px;
+            font-weight: 500;
+            transform: rotate(45deg);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: var(--text-color-light);
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page-container">
+        <header class="page-header">
+            <img src="https://bixobvseaocmhljckskl.supabase.co/storage/v1/object/public/assets_publicos/logo-redonda-prefeitura.png" alt="Logo da Prefeitura de Igarassu">
+            <h1>Sistema de Gestão de Almoxarifado</h1>
+            <p>Menu Principal</p>
+        </header>
+
+        <main>
+            <section class="menu-section">
+                <h2>Operacional</h2>
+                <div class="menu-grid">
+                    <a href="/admin/dashboard-estoque/dashboard.html" class="menu-card">
+                        <i class="material-icons card-icon">dashboard</i>
+                        <h3 class="card-title">Dashboard de Estoque</h3>
+                        <p class="card-description">Visualize indicadores, gráficos e o resumo geral do seu estoque.</p>
+                    </a>
+                    <a href="/admin/movimentacao/movimentacao.html" class="menu-card">
+                        <i class="material-icons card-icon">swap_horiz</i>
+                        <h3 class="card-title">Lançar Movimentações</h3>
+                        <p class="card-description">Registre e consulte todas as entradas e saídas de mercadorias.</p>
+                    </a>
+                    <a href="/solicitante/saida-materiais.html" class="menu-card">
+                        <i class="material-icons card-icon">description</i>
+                        <h3 class="card-title">Fichas de Expedição</h3>
+                        <p class="card-description">Solicite materiais para o seu setor de forma rápida e organizada.</p>
+                    </a>    
+                    <a href="/admin/Inventario/inventario.html" class="menu-card">
+                        <i class="material-icons card-icon">checklist</i>
+                        <h3 class="card-title">Realizar Inventário</h3>
+                        <p class="card-description">Faça a contagem física e ajuste as quantidades de estoque.</p>
+                    </a>
+                </div>
+            </section>
+
+            <section class="menu-section">
+                <h2>Cadastros</h2>
+                <div class="menu-grid">
+                    <a href="/admin/cadastro-produto/cadastro_produto.html" class="menu-card">
+                        <i class="material-icons card-icon">inventory_2</i>
+                        <h3 class="card-title">Produtos</h3>
+                        <p class="card-description">Cadastre e gerencie todos os itens do almoxarifado.</p>
+                    </a>
+                    <a href="/admin/setores/setores.html" class="menu-card">
+                        <i class="material-icons card-icon">corporate_fare</i>
+                        <h3 class="card-title">Setores e Departamentos</h3>
+                        <p class="card-description">Gerencie os centros de custo que solicitam materiais.</p>
+                    </a>
+                    <a href="/admin/Fornecedores/fornecedores.html" class="menu-card">
+                        <i class="material-icons card-icon">local_shipping</i>
+                        <h3 class="card-title">Fornecedores</h3>
+                        <p class="card-description">Cadastre e consulte os dados dos seus fornecedores.</p>
+                    </a>
+                </div>
+            </section>
+            
+            <section class="menu-section">
+                <h2>Relatórios e Análises</h2>
+                <div class="menu-grid">
+                    <a href="/admin/historico-de-pedidos/historico_pedidos.html" class="menu-card">
+                        <i class="material-icons card-icon">history</i>
+                        <h3 class="card-title">Histórico de Pedidos</h3>
+                        <p class="card-description">Consulte e analise o status de todas as solicitações de material.</p>
+                    </a>
+                    <a href="#" class="menu-card coming-soon">
+                        <i class="material-icons card-icon">notification_important</i>
+                        <h3 class="card-title">Alerta de Estoque Mínimo</h3>
+                        <p class="card-description">Visualize produtos que atingiram o nível mínimo e precisam de reposição.</p>
+                    </a>
+                    <a href="#" class="menu-card coming-soon">
+                        <i class="material-icons card-icon">leaderboard</i>
+                        <h3 class="card-title">Consumo por Setor</h3>
+                        <p class="card-description">Analise o que, quanto e quando cada departamento está consumindo.</p>
+                    </a>
+                    <a href="#" class="menu-card coming-soon">
+                        <i class="material-icons card-icon">analytics</i>
+                        <h3 class="card-title">Análise de Curva ABC</h3>
+                        <p class="card-description">Classifique a relevância dos seus produtos em estoque por valor ou giro.</p>
+                    </a>
+                    <a href="#" class="menu-card coming-soon">
+                        <i class="material-icons card-icon">manage_search</i>
+                        <h3 class="card-title">Histórico por Produto</h3>
+                        <p class="card-description">Consulte todo o histórico de movimentação detalhado de um único item.</p>
+                    </a>
+                </div>
+            </section>
+
+            <section class="menu-section">
+                <h2>Administração</h2>
+                <div class="menu-grid">
+                     <a href="#" class="menu-card coming-soon">
+                        <i class="material-icons card-icon">manage_accounts</i>
+                        <h3 class="card-title">Usuários e Permissões</h3>
+                        <p class="card-description">Gerencie o acesso e as permissões de cada usuário ao sistema.</p>
+                    </a>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>&copy; 2025 - Prefeitura de Igarassu - Sistema de Gestão de Almoxarifado</p>
+        </footer>
+    </div>
+
+</body>
+</html>

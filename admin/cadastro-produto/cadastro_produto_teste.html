@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Produtos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    <style>
+        :root {
+            --primary-color: #333;
+            --accent-color: #007bff;
+            --background-color: #f8f9fa;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --text-color-light: #6c757d;
+            --border-color: #dee2e6;
+        }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--background-color); color: var(--primary-color); padding: 20px; margin: 0; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { 
+            background-color: #fff; 
+            border-radius: 8px; 
+            padding: 30px; 
+            border: 1px solid var(--border-color); 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
+        }
+        .page-header { text-align: center; margin-bottom: 30px; }
+        .page-header img { max-height: 50px; margin-bottom: 15px; }
+        .page-header h1 { font-size: 28px; font-weight: 500; margin: 0; }
+        .page-header p { color: var(--text-color-light); margin: 5px 0 0; }
+        .btn { padding: 12px 20px; font-size: 14px; border-radius: 5px; border: none; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; transition: background-color 0.2s; text-decoration: none; }
+        .btn-back-fixed {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background-color: #fff;
+            color: var(--text-color-light);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-back-fixed:hover { background-color: #e9ecef; }
+        .form-wrapper { display: flex; gap: 30px; margin-bottom: 30px; }
+        .form-fields { flex: 2; }
+        .product-image-container { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; background-color: #f8f9fa; border-radius: 8px; 
+            padding: 15px; 
+            border: 1px dashed #ced4da; 
+            text-align: center; 
+        }
+        #product-image { max-width: 100%; max-height: 150px; border-radius: 4px; display: none; margin-bottom: 15px; object-fit: contain; }
+        #image-placeholder { color: var(--text-color-light); }
+        #upload-image-input { display: none; }
+        #upload-status { font-size: 12px; margin-top: 10px; color: var(--text-color-light); }
+        .form-row { display: flex; gap: 20px; }
+        .form-group { margin-bottom: 20px; flex: 1; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #495057; }
+        input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
+        input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2); }
+        .input-with-button { display: flex; align-items: center; gap: 10px; }
+        .form-buttons { margin-top: 10px; display: flex; gap: 10px; }
+        .btn:disabled { background-color: #adb5bd; cursor: not-allowed; }
+        .btn-search { background-color: #6c757d; color: white; }
+        .btn-search:hover:not(:disabled) { background-color: #5a6268; }
+        .btn-save { background-color: var(--accent-color); color: white; }
+        .btn-save:hover:not(:disabled) { background-color: #0069d9; }
+        .btn-clear { background-color: #f8f9fa; color: #333; border: 1px solid #ccc;}
+        .table-wrapper { border-top: 1px solid var(--border-color); padding-top: 20px; }
+        .products-table { width: 100%; border-collapse: collapse; }
+        .products-table th, .products-table td { text-align: left; padding: 12px 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        .products-table th { background-color: #f8f9fa; font-weight: 500; }
+        .actions-cell { text-align: right; }
+        .btn-action { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: background-color 0.2s; margin-left: 5px; }
+        .btn-edit { color: #5a6268; }
+        .btn-edit:hover { background-color: #e9ecef; }
+        .btn-delete { color: #dc3545; }
+        .btn-delete:hover { background-color: #fbe9e7; }
+        .btn-action .material-icons { font-size: 20px; }
+    </style>
+</head>
+<body>
+    <a href="../menu.html" class="btn btn-back-fixed"><i class="material-icons">arrow_back</i>Voltar ao Menu</a>
+    <div class="container">
+        <div class="card">
+            <div class="page-header">
+                <img src="https://raw.githubusercontent.com/silasdouglas/prefeitura-de-igarassu/main/Logo%20Redonda.png" alt="Logo da Prefeitura de Igarassu">
+                <h1>Cadastro de Produtos</h1>
+                <p>Adicione e gerencie os produtos do seu estoque.</p>
+            </div>
+            <div class="form-wrapper">
+                <div class="form-fields">
+                    <form id="form-produto">
+                        <input type="hidden" id="produto-id">
+                        <div class="form-group"><label for="produto-codigo">Código de Barras (EAN)</label><div class="input-with-button"><input type="text" id="produto-codigo" placeholder="Use o leitor ou digite o código" autofocus><button type="button" class="btn btn-search" id="btn-buscar-codigo"><i class="material-icons">search</i> Buscar</button></div></div>
+                        <div class="form-group"><label for="produto-descricao">Nome / Descrição do Produto</label><input type="text" id="produto-descricao" placeholder="Preenchido automaticamente ou digite" required></div>
+                        <div class="form-row">
+                            <div class="form-group"><label for="produto-marca">Marca</label><input type="text" id="produto-marca" placeholder="Marca do produto"></div>
+                            <div class="form-group"><label for="produto-ncm">NCM</label><input type="text" id="produto-ncm" placeholder="NCM do produto"></div>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn btn-save" id="btn-salvar"><i class="material-icons">save</i><span id="btn-text">Salvar Produto</span></button>
+                            <button type="button" class="btn btn-clear" id="btn-limpar-form"><i class="material-icons">clear</i> Limpar Formulário</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="product-image-container">
+                    <img id="product-image" src="" alt="Imagem do Produto">
+                    <span id="image-placeholder">Imagem do produto aparecerá aqui</span>
+                    <input type="file" id="upload-image-input" style="display:none;" accept="image/*">
+                    <label for="upload-image-input" class="btn" style="background-color: #6c757d; color: white; margin-top: 15px;"><i class="material-icons">upload</i> Enviar Imagem</label>
+                    <p id="upload-status"></p>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table class="products-table">
+                    <thead><tr><th>ID</th><th>Cód. Barras</th><th>Descrição</th><th>Marca</th><th>NCM</th><th class="actions-cell">Ações</th></tr></thead>
+                    <tbody id="products-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const SUPABASE_URL = 'https://bixobvseaocmhljckskl.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpeG9idnNlYW9jbWhsamNrc2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTgyNjcsImV4cCI6MjA3MDU5NDI2N30.SjChWwpw3zYPa_lJ5Z4axpDExXHSHdq0_pntpfES2jo';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // [NOVO] Script "Porteiro" para proteger a página
+    const verificarUsuarioLogado = async () => {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            alert('Acesso negado. Por favor, faça o login.');
+            // O caminho '../' volta da pasta 'cadastro-produto' para a raiz onde está o login.html
+            window.location.href = '../login.html'; 
+        }
+    };
+
+    const BUCKET_NAME = 'imagens-produtos';
+    const formProduto = document.getElementById('form-produto');
+    const produtoIdInput = document.getElementById('produto-id');
+    const produtoCodigoInput = document.getElementById('produto-codigo');
+    const produtoDescricaoInput = document.getElementById('produto-descricao');
+    const produtoMarcaInput = document.getElementById('produto-marca');
+    const produtoNcmInput = document.getElementById('produto-ncm');
+    const tableBody = document.getElementById('products-table-body');
+    const btnSalvar = document.getElementById('btn-salvar');
+    const btnText = document.getElementById('btn-text');
+    const btnLimpar = document.getElementById('btn-limpar-form');
+    const productImage = document.getElementById('product-image');
+    const imagePlaceholder = document.getElementById('image-placeholder');
+    const uploadImageInput = document.getElementById('upload-image-input');
+    const uploadStatus = document.getElementById('upload-status');
+    let arquivoDeImagemOtimizado = null;
+
+    const resetForm = () => { /* ...código mantido... */ };
+    btnLimpar.addEventListener('click', resetForm);
+    uploadImageInput.addEventListener('change', async (event) => { /* ...código mantido... */ });
+
+    const renderizarProdutos = (produtos) => {
+        tableBody.innerHTML = '';
+        if (produtos.length === 0) { tableBody.innerHTML = '<tr><td colspan="6">Nenhum produto cadastrado.</td></tr>'; return; }
+        produtos.sort((a, b) => a.descricao.localeCompare(b.descricao)).forEach(produto => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${produto.id}</td><td>${produto.codigo_barras || '-'}</td><td>${produto.descricao}</td><td>${produto.marca || '-'}</td><td>${produto.ncm || '-'}</td><td class="actions-cell"><button class="btn-action btn-edit" data-id="${produto.id}" title="Editar"><i class="material-icons">edit</i></button><button class="btn-action btn-delete" data-id="${produto.id}" title="Excluir"><i class="material-icons">delete</i></button></td>`;
+            tableBody.appendChild(row);
+        });
+    };
+
+    const carregarProdutos = async () => {
+        tableBody.innerHTML = '<tr><td colspan="6">Carregando...</td></tr>';
+        const { data, error } = await supabaseClient.from('produtos').select('*').order('descricao', { ascending: true });
+        if (error) {
+            console.error('Erro ao carregar produtos:', error);
+            tableBody.innerHTML = `<tr><td colspan="6" style="color: red;">Erro ao carregar produtos. Verifique as permissões (RLS).</td></tr>`;
+        } else {
+            renderizarProdutos(data);
+        }
+    };
+
+    formProduto.addEventListener('submit', async (event) => { /* ...código mantido... */ });
+    tableBody.addEventListener('click', async (event) => { /* ...código mantido... */ });
+
+    async function init() {
+        await verificarUsuarioLogado(); // Verifica se o usuário está logado antes de fazer qualquer outra coisa
+        carregarProdutos(); // Só executa se o usuário estiver logado
+    }
+
+    init(); // Inicia a página
+
+    // Cole aqui o restante do seu código JS que foi omitido para encurtar
+    // (resetForm, upload, submit, table click, etc.)
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const SUPABASE_URL = 'https://bixobvseaocmhljckskl.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpeG9idnNlYW9jbWhsamNrc2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTgyNjcsImV4cCI6MjA3MDU5NDI2N30.SjChWwpw3zYPa_lJ5Z4axpDExXHSHdq0_pntpfES2jo';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const verificarUsuarioLogado = async () => {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            alert('Acesso negado. Por favor, faça o login.');
+            window.location.href = '../login.html';
+        }
+    };
+
+    const BUCKET_NAME = 'imagens-produtos';
+    const formProduto = document.getElementById('form-produto');
+    const produtoIdInput = document.getElementById('produto-id');
+    const produtoCodigoInput = document.getElementById('produto-codigo');
+    const produtoDescricaoInput = document.getElementById('produto-descricao');
+    const produtoMarcaInput = document.getElementById('produto-marca');
+    const produtoNcmInput = document.getElementById('produto-ncm');
+    const tableBody = document.getElementById('products-table-body');
+    const btnSalvar = document.getElementById('btn-salvar');
+    const btnText = document.getElementById('btn-text');
+    const btnLimpar = document.getElementById('btn-limpar-form');
+    const productImage = document.getElementById('product-image');
+    const imagePlaceholder = document.getElementById('image-placeholder');
+    const uploadImageInput = document.getElementById('upload-image-input');
+    const uploadStatus = document.getElementById('upload-status');
+    let arquivoDeImagemOtimizado = null;
+
+    const resetForm = () => {
+        formProduto.reset();
+        produtoIdInput.value = '';
+        btnText.textContent = 'Salvar Produto';
+        btnSalvar.querySelector('i').textContent = 'save';
+        produtoCodigoInput.focus();
+        productImage.src = '';
+        productImage.style.display = 'none';
+        productImage.removeAttribute('data-original-url');
+        imagePlaceholder.style.display = 'block';
+        uploadImageInput.value = '';
+        arquivoDeImagemOtimizado = null;
+        uploadStatus.textContent = '';
+    };
+    btnLimpar.addEventListener('click', resetForm);
+
+    uploadImageInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) { arquivoDeImagemOtimizado = null; return; }
+        uploadStatus.textContent = `Original: (${(file.size / 1024 / 1024).toFixed(2)} MB). Otimizando...`;
+        const options = { maxSizeMB: 1, maxWidthOrHeight: 1280, useWebWorker: true };
+        try {
+            const compressedFile = await imageCompression(file, options);
+            arquivoDeImagemOtimizado = compressedFile;
+            productImage.src = URL.createObjectURL(compressedFile);
+            productImage.style.display = 'block';
+            imagePlaceholder.style.display = 'none';
+            uploadStatus.textContent = `Pronto para envio: (${(compressedFile.size / 1024).toFixed(0)} KB)`;
+        } catch (error) {
+            console.error('Erro ao otimizar imagem:', error);
+            uploadStatus.textContent = 'Erro ao otimizar imagem.';
+            arquivoDeImagemOtimizado = null;
+        }
+    });
+
+    const renderizarProdutos = (produtos) => {
+        tableBody.innerHTML = '';
+        if (produtos.length === 0) { tableBody.innerHTML = '<tr><td colspan="6">Nenhum produto cadastrado.</td></tr>'; return; }
+        produtos.sort((a, b) => a.descricao.localeCompare(b.descricao)).forEach(produto => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${produto.id}</td><td>${produto.codigo_barras || '-'}</td><td>${produto.descricao}</td><td>${produto.marca || '-'}</td><td>${produto.ncm || '-'}</td><td class="actions-cell"><button class="btn-action btn-edit" data-id="${produto.id}" title="Editar"><i class="material-icons">edit</i></button><button class="btn-action btn-delete" data-id="${produto.id}" title="Excluir"><i class="material-icons">delete</i></button></td>`;
+            tableBody.appendChild(row);
+        });
+    };
+
+    const carregarProdutos = async () => {
+        tableBody.innerHTML = '<tr><td colspan="6">Carregando...</td></tr>';
+        const { data, error } = await supabaseClient.from('produtos').select('*').order('descricao', { ascending: true });
+        if (error) { console.error('Erro ao carregar produtos:', error); tableBody.innerHTML = `<tr><td colspan="6" style="color: red;">Erro ao carregar produtos. Verifique as permissões (RLS).</td></tr>`; } 
+        else { renderizarProdutos(data); }
+    };
+
+    formProduto.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const id = produtoIdInput.value;
+        const descricao = produtoDescricaoInput.value.trim();
+        if (!descricao) { alert('Por favor, preencha a descrição do produto.'); return; }
+        btnSalvar.disabled = true;
+        btnText.textContent = id ? 'Atualizando...' : 'Salvando...';
+        let imageUrlToSave = id ? productImage.dataset.originalUrl || null : null;
+        if (arquivoDeImagemOtimizado) {
+            uploadStatus.textContent = 'Enviando imagem...';
+            const filePath = `public/${Date.now()}-${arquivoDeImagemOtimizado.name}`;
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage.from(BUCKET_NAME).upload(filePath, arquivoDeImagemOtimizado, { upsert: true });
+            if (uploadError) {
+                alert('Erro ao fazer upload da imagem: ' + uploadError.message);
+                btnSalvar.disabled = false; btnText.textContent = id ? 'Atualizar Produto' : 'Salvar Produto'; return;
+            }
+            const { data: urlData } = supabaseClient.storage.from(BUCKET_NAME).getPublicUrl(uploadData.path);
+            imageUrlToSave = urlData.publicUrl;
+        }
+        const produtoData = {
+            codigo_barras: produtoCodigoInput.value.trim() || null, descricao,
+            marca: produtoMarcaInput.value.trim(), ncm: produtoNcmInput.value.trim(),
+            imagem_url: imageUrlToSave
+        };
+        const { error } = id ? await supabaseClient.from('produtos').update(produtoData).eq('id', id) : await supabaseClient.from('produtos').insert(produtoData);
+        if (error) { alert('Erro ao salvar produto: ' + error.message); } 
+        else { resetForm(); await carregarProdutos(); }
+        btnSalvar.disabled = false;
+        btnText.textContent = produtoIdInput.value ? 'Atualizar Produto' : 'Salvar Produto';
+    });
+    
+    tableBody.addEventListener('click', async (event) => {
+        const target = event.target.closest('.btn-action');
+        if (!target) return;
+        const id = target.dataset.id;
+        if (target.classList.contains('btn-edit')) {
+            const { data, error } = await supabaseClient.from('produtos').select('*').eq('id', id).single();
+            if (error) { alert('Não foi possível carregar os dados para edição.'); return; }
+            resetForm();
+            produtoIdInput.value = data.id;
+            produtoCodigoInput.value = data.codigo_barras || '';
+            produtoDescricaoInput.value = data.descricao || '';
+            produtoMarcaInput.value = data.marca || '';
+            produtoNcmInput.value = data.ncm || '';
+            if (data.imagem_url) {
+                productImage.src = data.imagem_url;
+                productImage.dataset.originalUrl = data.imagem_url;
+                productImage.style.display = 'block';
+                imagePlaceholder.style.display = 'none';
+            }
+            btnText.textContent = 'Atualizar Produto';
+            btnSalvar.querySelector('i').textContent = 'update';
+            produtoCodigoInput.focus();
+            window.scrollTo(0, 0);
+        }
+        if (target.classList.contains('btn-delete')) {
+            const { error } = await supabaseClient.from('produtos').update({ ativo: false }).eq('id', id);
+            if (error) { alert('Erro ao inativar produto: ' + error.message); } 
+            else { alert('Produto inativado com sucesso!'); await carregarProdutos(); }
+        }
+    });
+
+    async function init() {
+        await verificarUsuarioLogado();
+        carregarProdutos();
+    }
+    init();
+});
+</script>
+</body>
+</html>

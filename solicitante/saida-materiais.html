@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha de Saída Almoxarifado</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --primary-color: #333;
+            --accent-color: #007bff;
+            --background-color: #f8f9fa;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --text-color-light: #6c757d;
+            --border-color: #dee2e6;
+        }
+        body { font-family: 'Roboto', sans-serif; background-color: #f4f7f6; color: #333; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { max-width: 1100px; width: 100%; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); position: relative; }
+        .card { background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .card h2 { font-size: 16px; color: #555; margin-top: 0; margin-bottom: 20px; font-weight: 500; }
+        .form-row { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 15px; }
+        .form-group { flex: 1; display: flex; flex-direction: column; min-width: 200px; }
+        label { margin-bottom: 5px; font-size: 14px; font-weight: 500; }
+        input[type="text"], input[type="number"], textarea, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; background-color: #f9f9f9; box-sizing: border-box; width: 100%; font-family: 'Roboto', sans-serif; }
+        textarea { min-height: 80px; resize: vertical; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .btn-add { background-color: #333; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 500; }
+        .table-wrapper { overflow-x: auto; }
+        #tabela-itens { width: 100%; border-collapse: collapse; }
+        #tabela-itens th, #tabela-itens td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #ddd; font-size: 14px; vertical-align: middle; }
+        #tabela-itens th { font-weight: 500; color: #777; white-space: nowrap; }
+        .input-small { width: 65px; text-align: center; }
+        .btn-delete, .btn-busca-produto { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-delete { color: #d9534f; }
+        .btn-busca-produto { color: #333; }
+        .material-icons { font-size: 20px; }
+        td.search-cell { width: 40px; padding: 8px !important; }
+        .footer { text-align: center; margin-top: 20px; }
+        .btn-submit-pedido { background-color: var(--accent-color); color: white; padding: 12px 25px; font-size: 16px; font-weight: bold; border:none; border-radius: 4px; cursor: pointer; }
+        .header { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 20px; text-align: center; }
+        .logo-placeholder { width: 180px; height: 60px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .logo-placeholder img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .header-title h1 { margin: 0; font-size: 18px; font-weight: bold; }
+        .header-info { display: flex; justify-content: center; align-items: center; font-size: 12px; color: #666; flex-wrap: wrap; gap: 15px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .modal-container { background-color: #fff; padding: 25px; border-radius: 8px; width: 90%; max-width: 800px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+        .modal-header h3 { margin: 0; font-size: 18px; }
+        .modal-close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #888; }
+        .modal-filters { display: flex; gap: 15px; margin-bottom: 15px; }
+        #modal-filtro-codigo { flex-grow: 1; flex-basis: 120px; }
+        #modal-filtro-descricao { flex-grow: 3; flex-basis: 300px; }
+        .modal-body .results-container { max-height: 40vh; overflow-y: auto; }
+        .modal-table { width: 100%; border-collapse: collapse; }
+        .modal-table th, .modal-table td { text-align: left; padding: 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+        .modal-table tbody tr { cursor: pointer; }
+        .modal-table tbody tr:hover { background-color: #f9f9f9; }
+        .status-cell { display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .status-dot.disponivel { background-color: #28a745; }
+        .status-dot.indisponivel { background-color: #dc3545; }
+        .product-thumbnail { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); }
+        .image-preview-overlay { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 80vw; max-height: 40vh; z-index: 9999; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); pointer-events: none; transition: opacity 0.2s ease-in-out; opacity: 0; object-fit: contain; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header class="header">
+            <div class="logo-placeholder"><img src="https://bixobvseaocmhljckskl.supabase.co/storage/v1/object/public/assets_publicos/logo-redonda-prefeitura.png" alt="Logo"></div>
+            <div class="header-title"><h1>FICHA DE SOLICITAÇÃO DE MATERIAL</h1></div>
+            <div class="header-info">
+                <span><strong>Nº</strong> <span id="info-numero">Aguardando...</span></span>
+                <span><strong>Data:</strong> <span id="info-data">...</span></span>
+                <span><strong>Hora:</strong> <span id="info-hora">...</span></span>
+            </div>
+        </header>
+
+        <section class="card">
+            <h2>Dados do Requisitante</h2>
+            <div class="form-row"><div class="form-group"><label for="setor">Unidade</label><select id="setor" required><option value="">Carregando...</option></select></div></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h2>Itens Solicitados</h2>
+                <button id="adicionar-item" class="btn-add">+ Adicionar Item</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="tabela-itens">
+                    <thead><tr><th>Item</th><th></th><th>Produto</th><th>Unid.</th><th>Qtd. Sol.</th><th>Qtd. Aten.</th><th>Ação</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Observações Gerais</h2>
+            <textarea id="observacoes-gerais" placeholder="Observações adicionais..."></textarea>
+        </section>
+
+        <footer class="footer">
+            <button id="enviar-pedido-btn" class="btn-submit-pedido">Enviar Pedido</button>
+        </footer>
+    </main>
+
+    <div id="modal-busca-produto" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>Buscar Produto</h3>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-filters">
+                    <input type="text" id="modal-filtro-codigo" placeholder="Filtrar por ID...">
+                    <input type="text" id="modal-filtro-descricao" placeholder="Filtrar por descrição...">
+                </div>
+                <div class="results-container">
+                    <table class="modal-table">
+                        <thead><tr><th style="width: 80px;">Imagem</th><th>ID</th><th>Descrição</th><th>Estoque</th><th>Status</th></tr></thead>
+                        <tbody id="modal-results-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const SUPABASE_URL = 'https://bixobvseaocmhljckskl.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpeG9idnNlYW9jbWhsamNrc2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTgyNjcsImV4cCI6MjA3MDU5NDI2N30.SjChWwpw3zYPa_lJ5Z4axpDExXHSHdq0_pntpfES2jo';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const tabelaItensBody = document.querySelector('#tabela-itens tbody');
+        const botaoAdicionarItem = document.getElementById('adicionar-item');
+        const botaoEnviarPedido = document.getElementById('enviar-pedido-btn');
+        const modal = document.getElementById('modal-busca-produto');
+        const modalCloseBtn = modal.querySelector('.modal-close-btn');
+        const modalFiltroCodigo = document.getElementById('modal-filtro-codigo');
+        const modalFiltroDescricao = document.getElementById('modal-filtro-descricao');
+        const modalResultsBody = document.getElementById('modal-results-body');
+        let linhaAtivaParaPreenchimento = null;
+        let dataHoraEmissao = new Date();
+        let todosOsProdutos = [];
+
+        async function configurarCabecalho() {
+            try {
+                const response = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo');
+                if (!response.ok) throw new Error('Falha na API de tempo');
+                const data = await response.json();
+                dataHoraEmissao = new Date(data.utc_datetime);
+            } catch (error) {
+                console.warn("Aviso: Usando hora local.", error);
+                dataHoraEmissao = new Date();
+            }
+            document.querySelector('#info-data').textContent = dataHoraEmissao.toLocaleDateString('pt-BR');
+            document.querySelector('#info-hora').textContent = dataHoraEmissao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        async function carregarSetores() {
+            const { data, error } = await supabaseClient.from('setores').select('id, nome_setor').order('nome_setor');
+            if (error) { console.error("Erro ao carregar setores:", error); return; }
+            const selectSetor = document.getElementById('setor');
+            selectSetor.innerHTML = '<option value="">Selecione uma unidade</option>';
+            data.forEach(setor => {
+                selectSetor.innerHTML += `<option value="${setor.id}">${setor.nome_setor}</option>`;
+            });
+        }
+
+        async function abrirModalBusca(trElement) {
+            linhaAtivaParaPreenchimento = trElement;
+            modalResultsBody.innerHTML = '<tr><td colspan="5">Carregando produtos...</td></tr>';
+            modal.style.display = 'flex';
+            if (todosOsProdutos.length === 0) {
+                const { data, error } = await supabaseClient.from('produtos').select('id, descricao, unidade, quantidade_estoque, imagem_url').order('descricao');
+                if (error) { modalResultsBody.innerHTML = '<tr><td colspan="5">Erro ao carregar produtos.</td></tr>'; return; }
+                todosOsProdutos = data;
+            }
+            renderizarProdutosModal(todosOsProdutos);
+        }
+
+        function renderizarProdutosModal(produtos) {
+            modalResultsBody.innerHTML = '';
+            produtos.forEach(produto => {
+                const row = document.createElement('tr');
+                row.dataset.produto = JSON.stringify(produto);
+                const estoque = produto.quantidade_estoque || 0;
+                const status = estoque >= 1 ? { texto: 'Disponível', classe: 'disponivel' } : { texto: 'Indisponível', classe: 'indisponivel' };
+                const imageUrl = produto.imagem_url ? produto.imagem_url : `https://placehold.co/60x40/eee/ccc?text=Sem+Foto`;
+                row.innerHTML = `<td><img src="${imageUrl}" alt="${produto.descricao}" class="product-thumbnail"></td><td>${produto.id}</td><td>${produto.descricao}</td><td>${estoque}</td><td><div class="status-cell"><span class="status-dot ${status.classe}"></span><span>${status.texto}</span></div></td>`;
+                modalResultsBody.appendChild(row);
+            });
+        }
+
+        function fecharModalBusca() {
+            modal.style.display = 'none';
+            modalFiltroCodigo.value = '';
+            modalFiltroDescricao.value = '';
+            linhaAtivaParaPreenchimento = null;
+        }
+
+        function criarNovaLinha() {
+            const numeroItem = tabelaItensBody.rows.length + 1;
+            const newRow = tabelaItensBody.insertRow();
+            newRow.innerHTML = `<td>${numeroItem}</td><td class="search-cell"><button class="btn-busca-produto" title="Buscar Produto"><i class="material-icons">search</i></button></td><td><input type="text" placeholder="Clique na lupa para buscar" class="produto-display-input" readonly></td><td><input type="text" class="input-unidade input-small" readonly></td><td><input type="number" value="1" min="1" class="input-qtd-sol input-small" disabled></td><td><input type="number" value="0" min="0" class="input-qtd-aten input-small"></td><td><button class="btn-delete" title="Excluir item"><i class="material-icons">delete</i></button></td>`;
+        }
+
+        function renumerarLinhas() {
+            tabelaItensBody.querySelectorAll('tr').forEach((linha, index) => {
+                linha.cells[0].textContent = index + 1;
+            });
+        }
+
+        modalResultsBody.addEventListener('mouseover', (event) => {
+            if (event.target.classList.contains('product-thumbnail')) {
+                const previewImage = document.createElement('img');
+                previewImage.src = event.target.src;
+                previewImage.id = 'active-image-preview';
+                previewImage.className = 'image-preview-overlay';
+                document.body.appendChild(previewImage);
+                requestAnimationFrame(() => { previewImage.style.opacity = 1; });
+            }
+        });
+
+        modalResultsBody.addEventListener('mouseout', (event) => {
+            if (event.target.classList.contains('product-thumbnail')) {
+                const previewImage = document.getElementById('active-image-preview');
+                if (previewImage) { previewImage.remove(); }
+            }
+        });
+
+        botaoAdicionarItem.addEventListener('click', criarNovaLinha);
+        modalCloseBtn.addEventListener('click', fecharModalBusca);
+        modal.addEventListener('click', (event) => { if(event.target === modal) fecharModalBusca(); });
+
+        function aplicarFiltrosModal() {
+            const filtroCodigo = modalFiltroCodigo.value.toLowerCase();
+            const filtroDescricao = modalFiltroDescricao.value.toLowerCase();
+            const produtosFiltrados = todosOsProdutos.filter(p => {
+                const idMatch = String(p.id).toLowerCase().includes(filtroCodigo);
+                const descricaoMatch = p.descricao.toLowerCase().includes(filtroDescricao);
+                return idMatch && descricaoMatch;
+            });
+            renderizarProdutosModal(produtosFiltrados);
+        }
+
+        modalFiltroCodigo.addEventListener('input', aplicarFiltrosModal);
+        modalFiltroDescricao.addEventListener('input', aplicarFiltrosModal);
+
+        modalResultsBody.addEventListener('click', (event) => {
+            const tr = event.target.closest('tr');
+            if (!tr || !tr.dataset.produto) return;
+            const produto = JSON.parse(tr.dataset.produto);
+            const estoque = produto.quantidade_estoque || 0;
+            if (estoque < 1) { alert('Este produto está indisponível e não pode ser selecionado.'); return; }
+            if (linhaAtivaParaPreenchimento) {
+                linhaAtivaParaPreenchimento.dataset.produtoId = produto.id;
+                linhaAtivaParaPreenchimento.querySelector('.produto-display-input').value = produto.descricao;
+                linhaAtivaParaPreenchimento.querySelector('.input-unidade').value = produto.unidade || 'UN';
+                const inputQtdSol = linhaAtivaParaPreenchimento.querySelector('.input-qtd-sol');
+                inputQtdSol.disabled = false;
+                inputQtdSol.max = estoque;
+                inputQtdSol.focus();
+            }
+            fecharModalBusca();
+        });
+
+        tabelaItensBody.addEventListener('click', (event) => {
+            const btnBusca = event.target.closest('.btn-busca-produto');
+            if (btnBusca) abrirModalBusca(btnBusca.closest('tr'));
+            const btnDelete = event.target.closest('.btn-delete');
+            if (btnDelete) { btnDelete.closest('tr').remove(); renumerarLinhas(); }
+        });
+
+        botaoEnviarPedido.addEventListener('click', async function() {
+            const setorId = document.getElementById('setor').value;
+            if (!setorId) { alert('Selecione uma unidade.'); return; }
+            const linhasItens = tabelaItensBody.querySelectorAll('tr');
+            if (linhasItens.length === 0) { alert('Adicione pelo menos um item.'); return; }
+            let itensValidos = true;
+            linhasItens.forEach(tr => { if (!tr.dataset.produtoId) { itensValidos = false; } });
+            if (!itensValidos) { alert('Existem linhas de item não preenchidas.'); return; }
+            this.disabled = true; this.textContent = 'Enviando...';
+
+            const { data: fichaData, error: fichaError } = await supabaseClient.from('historico_pedidos').insert({ created_at: dataHoraEmissao.toISOString(), setor_id: setorId, observacoes: document.getElementById('observacoes-gerais').value, status: 'Pendente' }).select().single();
+            if (fichaError) { alert('Erro ao enviar o pedido: ' + fichaError.message); this.disabled = false; this.textContent = 'Enviar Pedido'; return; }
+            
+            document.querySelector('#info-numero').textContent = fichaData.id;
+
+            const itensDaFichaParaSalvar = Array.from(linhasItens).map(tr => ({ ficha_id: fichaData.id, produto_id: tr.dataset.produtoId, qtd_solicitada: tr.querySelector('.input-qtd-sol').value, qtd_atendida: tr.querySelector('.input-qtd-aten').value }));
+            const movimentacoesParaSalvar = itensDaFichaParaSalvar.filter(item => item.qtd_atendida > 0).map(item => ({ produto_id: item.produto_id, tipo_movimentacao: 'SAIDA', quantidade: item.qtd_atendida, ficha_id: fichaData.id, setor_id: setorId, origem_destino: document.getElementById('setor').options[document.getElementById('setor').selectedIndex].text }));
+
+            const { error: itensError } = await supabaseClient.from('historico_pedido_itens').insert(itensDaFichaParaSalvar);
+            if (itensError) { alert('Erro ao salvar os itens do pedido: ' + itensError.message); this.disabled = false; this.textContent = 'Enviar Pedido'; return; }
+
+            if (movimentacoesParaSalvar.length > 0) {
+                const { error: movError } = await supabaseClient.from('movimentacao_estoque').insert(movimentacoesParaSalvar);
+                if (movError) { alert('Erro ao registrar a movimentação de estoque: ' + movError.message); this.disabled = false; this.textContent = 'Enviar Pedido'; return; }
+            }
+
+            alert(`Pedido Nº ${fichaData.id} enviado com sucesso!`);
+            setTimeout(() => {
+                window.location.href = '../historico-pedidos/historico_pedidos.html';
+            }, 500); 
+        });
+        
+        async function init() {
+            await configurarCabecalho();
+            await carregarSetores();
+            criarNovaLinha();
+        }
+        init();
+    });
+    </script>
+</body>
+</html>

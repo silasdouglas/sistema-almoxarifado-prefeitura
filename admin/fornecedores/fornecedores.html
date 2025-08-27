@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Fornecedores</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --background-color: #f4f7f9;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --border-color: #dee2e6;
+        }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--background-color); color: var(--text-color); margin: 0; padding: 20px; }
+        .page-container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px; }
+        .page-header { text-align: center;}
+        .page-header img { max-height: 80px; margin-bottom: 0px; }
+        .card { background-color: var(--card-bg-color); padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9em; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; }
+        .form-row { display: flex; flex-wrap: wrap; gap: 20px; }
+        .form-row .form-group { flex: 1; min-width: 200px; }
+        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background-color 0.2s; }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #0056b3; }
+        .btn-secondary { background-color: var(--secondary-color); color: white; }
+        .cnpj-group { display: flex; gap: 10px; align-items: flex-end; }
+        .cnpj-group .form-group { flex-grow: 1; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        th { background-color: #f8f9fa; }
+        .actions-cell i { cursor: pointer; margin: 0 5px; }
+        .actions-cell .material-icons.edit { color: var(--primary-color); }
+        .actions-cell .material-icons.delete { color: #dc3545; }
+        
+    </style>
+</head>
+<body>
+
+    <div class="page-container">
+        <header class="page-header">
+            <img src="https://bixobvseaocmhljckskl.supabase.co/storage/v1/object/public/assets_publicos/logo-redonda-prefeitura.png" alt="Logo da Prefeitura">
+            <h1>Cadastro de Fornecedores</h1>
+            <h2>Adicione e gerencie os fornecedores de produtos e serviços.</h2>
+        </header>
+
+        <div class="card">
+            <form id="supplier-form">
+                <input type="hidden" id="supplier-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="razao-social">Razão Social</label>
+                        <input type="text" id="razao-social" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="nome-fantasia">Nome Fantasia</label>
+                        <input type="text" id="nome-fantasia">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="cnpj-group">
+                        <div class="form-group">
+                            <label for="cnpj">CNPJ</label>
+                            <input type="text" id="cnpj" placeholder="Digite o CNPJ e clique em buscar" required>
+                        </div>
+                        <button type="button" id="search-cnpj-btn" class="btn btn-secondary" style="margin-bottom: 15px;"><i class="material-icons">search</i> Buscar CNPJ</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="inscricao-estadual">Inscrição Estadual / Municipal</label>
+                        <input type="text" id="inscricao-estadual">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="telefone">Telefone</label>
+                        <input type="tel" id="telefone" placeholder="(81) 90000-0000">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email">
+                    </div>
+                </div>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                
+                <div class="form-row">
+                    <div class="form-group" style="flex: 0 0 150px;">
+                        <label for="cep">CEP</label>
+                        <input type="text" id="cep" placeholder="53400-000">
+                    </div>
+                    <div class="form-group" style="flex: 3;">
+                        <label for="endereco">Endereço (Logradouro)</label>
+                        <input type="text" id="endereco">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="numero">Número</label>
+                        <input type="text" id="numero">
+                    </div>
+                </div>
+                <div class="form-row">
+                     <div class="form-group">
+                        <label for="bairro">Bairro</label>
+                        <input type="text" id="bairro">
+                    </div>
+                    <div class="form-group">
+                        <label for="cidade">Cidade</label>
+                        <input type="text" id="cidade">
+                    </div>
+                    <div class="form-group" style="flex: 0 0 80px;">
+                        <label for="uf">UF</label>
+                        <input type="text" id="uf">
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="submit-button"><i class="material-icons">save</i> <span>Salvar Fornecedor</span></button>
+                    <button type="button" class="btn btn-secondary" id="clear-button"><i class="material-icons">delete_sweep</i> <span>Limpar</span></button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>Fornecedores Cadastrados</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>CNPJ</th>
+                        <th>Razão Social</th>
+                        <th>Telefone</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="suppliers-table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 1. CONFIGURAÇÃO E REFERÊNCIAS ---
+            const SUPABASE_URL = 'https://bixobvseaocmhljckskl.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpeG9idnNlYW9jbWhsamNrc2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTgyNjcsImV4cCI6MjA3MDU5NDI2N30.SjChWwpw3zYPa_lJ5Z4axpDExXHSHdq0_pntpfES2jo';
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            const form = document.getElementById('supplier-form');
+            const tableBody = document.getElementById('suppliers-table-body');
+            const supplierIdInput = document.getElementById('supplier-id');
+            const submitButton = document.getElementById('submit-button');
+            const submitButtonText = submitButton.querySelector('span');
+            const clearButton = document.getElementById('clear-button');
+            const searchCnpjBtn = document.getElementById('search-cnpj-btn');
+
+            // --- 2. FUNÇÕES DE CRUD (Create, Read, Update, Delete) ---
+            
+            async function carregarFornecedores() {
+                const { data, error } = await supabaseClient
+                    .from('fornecedores')
+                    .select('*')
+                    .order('razao_social', { ascending: true });
+
+                if (error) {
+                    console.error('Erro ao buscar fornecedores:', error);
+                    tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>`;
+                    return;
+                }
+
+                tableBody.innerHTML = '';
+                if (data.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">Nenhum fornecedor cadastrado.</td></tr>`;
+                } else {
+                    data.forEach(fornecedor => {
+                        const tr = document.createElement('tr');
+                        const cnpjFormatado = formatarCNPJ(fornecedor.cnpj);
+                        tr.innerHTML = `
+                            <td>${cnpjFormatado}</td>
+                            <td>${fornecedor.razao_social}</td>
+                            <td>${fornecedor.telefone || '-'}</td>
+                            <td class="actions-cell">
+                                <i class="material-icons edit" data-id="${fornecedor.id}" title="Editar">edit</i>
+                                <i class="material-icons delete" data-id="${fornecedor.id}" title="Excluir">delete</i>
+                            </td>
+                        `;
+                        tableBody.appendChild(tr);
+                    });
+                }
+            }
+
+            async function handleFormSubmit(event) {
+                event.preventDefault();
+
+                const id = supplierIdInput.value;
+                const fornecedorData = {
+                    razao_social: document.getElementById('razao-social').value.trim(),
+                    nome_fantasia: document.getElementById('nome-fantasia').value.trim(),
+                    cnpj: document.getElementById('cnpj').value.replace(/\D/g, ''),
+                    inscricao_est: document.getElementById('inscricao-estadual').value.trim(),
+                    telefone: document.getElementById('telefone').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    cep: document.getElementById('cep').value.trim(),
+                    endereco: document.getElementById('endereco').value.trim(),
+                    numero: document.getElementById('numero').value.trim(),
+                    bairro: document.getElementById('bairro').value.trim(),
+                    cidade: document.getElementById('cidade').value.trim(),
+                    uf: document.getElementById('uf').value.trim()
+                };
+
+                if (!fornecedorData.razao_social || !fornecedorData.cnpj) {
+                    alert('Razão Social e CNPJ são obrigatórios!');
+                    return;
+                }
+                
+                let error;
+                if (id) {
+                    const { error: updateError } = await supabaseClient.from('fornecedores').update(fornecedorData).eq('id', id);
+                    error = updateError;
+                } else {
+                    const { error: insertError } = await supabaseClient.from('fornecedores').insert([fornecedorData]);
+                    error = insertError;
+                }
+
+                if (error) {
+                    console.error('Erro ao salvar fornecedor:', error);
+                    alert(`Falha ao salvar o fornecedor: ${error.message}`);
+                } else {
+                    alert(`Fornecedor ${id ? 'atualizado' : 'cadastrado'} com sucesso!`);
+                    resetForm();
+                    carregarFornecedores();
+                }
+            }
+            
+            async function handleTableClick(event) {
+                const target = event.target;
+
+                if (target.classList.contains('delete')) {
+                    const id = target.dataset.id;
+                    if (confirm(`Tem certeza que deseja excluir o fornecedor de código ${id}?`)) {
+                        const { error } = await supabaseClient.from('fornecedores').delete().eq('id', id);
+
+                        if (error) {
+                            if (error.message.includes('violates foreign key constraint')) {
+                                alert('Não é possível excluir este fornecedor, pois ele já está vinculado a uma ou mais movimentações de estoque.');
+                            } else {
+                                alert(`Erro ao excluir: ${error.message}`);
+                            }
+                        } else {
+                            alert('Fornecedor excluído com sucesso!');
+                            carregarFornecedores();
+                        }
+                    }
+                }
+
+                if (target.classList.contains('edit')) {
+                    const id = target.dataset.id;
+                    const { data, error } = await supabaseClient.from('fornecedores').select('*').eq('id', id).single();
+                    
+                    if (error) {
+                        alert(`Não foi possível carregar os dados para edição: ${error.message}`);
+                        return;
+                    }
+                    
+                    // Preenche o formulário
+                    supplierIdInput.value = data.id;
+                    document.getElementById('razao-social').value = data.razao_social || '';
+                    document.getElementById('nome-fantasia').value = data.nome_fantasia || '';
+                    document.getElementById('cnpj').value = data.cnpj || '';
+                    document.getElementById('inscricao-estadual').value = data.inscricao_est || '';
+                    document.getElementById('telefone').value = data.telefone || '';
+                    document.getElementById('email').value = data.email || '';
+                    document.getElementById('cep').value = data.cep || '';
+                    document.getElementById('endereco').value = data.endereco || '';
+                    document.getElementById('numero').value = data.numero || '';
+                    document.getElementById('bairro').value = data.bairro || '';
+                    document.getElementById('cidade').value = data.cidade || '';
+                    document.getElementById('uf').value = data.uf || '';
+                    
+                    // Altera o botão para o modo de edição
+                    submitButtonText.textContent = 'Atualizar Fornecedor';
+                    submitButton.querySelector('i').textContent = 'update';
+                    form.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+
+            function resetForm() {
+                form.reset();
+                supplierIdInput.value = '';
+                submitButtonText.textContent = 'Salvar Fornecedor';
+                submitButton.querySelector('i').textContent = 'save';
+            }
+
+            // --- 3. LÓGICA DA BUSCA POR CNPJ ---
+            
+            async function handleCnpjSearch() {
+                const cnpjInput = document.getElementById('cnpj');
+                const cnpj = cnpjInput.value.replace(/\D/g, '');
+
+                if (cnpj.length !== 14) {
+                    alert('Por favor, digite um CNPJ válido com 14 dígitos.');
+                    return;
+                }
+
+                searchCnpjBtn.disabled = true;
+                searchCnpjBtn.innerHTML = '<i class="material-icons">hourglass_top</i> Buscando...';
+
+                try {
+                    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+                    if (!response.ok) throw new Error('CNPJ não encontrado ou API indisponível.');
+                    
+                    const data = await response.json();
+                    fillFormWithData(data);
+                } catch (error) {
+                    alert(error.message);
+                } finally {
+                    searchCnpjBtn.disabled = false;
+                    searchCnpjBtn.innerHTML = '<i class="material-icons">search</i> Buscar CNPJ';
+                }
+            }
+
+            function fillFormWithData(data) {
+                document.getElementById('razao-social').value = data.razao_social || '';
+                document.getElementById('nome-fantasia').value = data.nome_fantasia || '';
+                document.getElementById('cep').value = data.cep || '';
+                document.getElementById('endereco').value = data.logradouro || '';
+                document.getElementById('numero').value = data.numero || '';
+                document.getElementById('bairro').value = data.bairro || '';
+                document.getElementById('cidade').value = data.municipio || '';
+                document.getElementById('uf').value = data.uf || '';
+                document.getElementById('telefone').value = data.ddd_telefone_1 || '';
+                document.getElementById('email').value = data.email || '';
+                document.getElementById('numero').focus();
+            }
+            
+            function formatarCNPJ(cnpj) {
+                if (!cnpj) return '';
+                cnpj = cnpj.toString().padStart(14, '0');
+                return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+            }
+
+            // --- 4. INICIALIZAÇÃO E EVENT LISTENERS ---
+            form.addEventListener('submit', handleFormSubmit);
+            tableBody.addEventListener('click', handleTableClick);
+            clearButton.addEventListener('click', resetForm);
+            searchCnpjBtn.addEventListener('click', handleCnpjSearch);
+            
+            carregarFornecedores();
+        });
+    </script>
+</body>
+</html>

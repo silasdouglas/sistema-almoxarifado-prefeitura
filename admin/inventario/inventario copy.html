@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventário Físico - Ajuste de Estoque</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --primary-color: #333;
+            --accent-color: #007bff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --secondary-color: #6c757d;
+            --background-color: #f8f9fa;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --border-color: #dee2e6;
+        }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--background-color); color: var(--text-color); margin: 0; padding: 20px; }
+        .page-container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px; }
+        .page-header { text-align: center; }
+        .page-header img { max-height: 50px; margin-bottom: 10px; }
+        .page-header h1 { font-weight: 500; }
+        .page-header h2 { font-weight: 400; font-size: 1em; color: var(--secondary-color); }
+        .card { background-color: var(--card-bg-color); padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9em; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; background-color: #fff; font-family: 'Roboto', sans-serif; }
+        .form-row { display: flex; gap: 20px; }
+        .form-row .form-group { flex: 1; }
+        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; font-family: 'Roboto', sans-serif; transition: background-color 0.2s; }
+        .btn-primary { background-color: var(--accent-color); color: white; }
+        .btn-primary:hover { background-color: #0069d9; }
+        .btn-dark { background-color: #343a40; color: white; }
+        .btn-dark:hover { background-color: #23272b; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        th { background-color: #f8f9fa; font-weight: 500; }
+        #inventory-table input[type="number"], #inventory-table input[type="text"] { max-width: 120px; }
+        #inventory-table .diferenca-positiva { color: var(--success-color); font-weight: bold; }
+        #inventory-table .diferenca-negativa { color: var(--danger-color); font-weight: bold; }
+        .actions-cell i, .search-product i { cursor: pointer; }
+        .actions-cell .material-icons.delete { color: var(--danger-color); }
+        .search-product { display: flex; align-items: center; gap: 5px; }
+        .product-name-cell { color: var(--accent-color); font-weight: 500; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-container { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 700px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-header h3 { margin: 0; }
+        .modal-close-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+        .modal-filters { display: flex; gap: 10px; margin-bottom: 15px; }
+        .modal-filters input { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); }
+        .modal-table-container { max-height: 40vh; overflow-y: auto; }
+        #modal-products-table tbody tr { cursor: pointer; }
+        #modal-products-table tbody tr:hover { background-color: #f0f0f0; }
+    </style>
+</head>
+<body>
+
+    <div class="page-container">
+        <header class="page-header">
+            <img src="/caminho/para/seu/logo.png" alt="Logo da Prefeitura">
+            <h1>Módulo de Inventário Físico</h1>
+            <h2>Realize a contagem e ajuste as quantidades de estoque.</h2>
+        </header>
+
+        <div class="card">
+            <form id="inventory-form">
+                <h3>Dados do Inventário</h3>
+                <div class="form-row">
+                    <div class="form-group"><label for="data-contagem">Data da Contagem</label><input type="date" id="data-contagem" required></div>
+                    <div class="form-group"><label for="responsavel">Responsável pela Contagem</label><input type="text" id="responsavel" required></div>
+                    <div class="form-group"><label for="motivo-ajuste">Motivo do Ajuste</label><select id="motivo-ajuste" required><option value="Contagem de Rotina">Contagem de Rotina</option><option value="Perda ou Avaria">Perda ou Avaria</option><option value="Acerto de Lançamento">Acerto de Lançamento</option><option value="Balanço Anual">Balanço Anual</option><option value="Outros">Outros</option></select></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                    <h3>Itens Contados</h3>
+                    <button type="button" class="btn btn-dark" id="add-item-btn"><i class="material-icons">add</i> Adicionar Produto</button>
+                </div>
+                <table id="inventory-table">
+                    <thead><tr><th style="width: 40%;">Produto</th><th style="text-align: center;">Qtd. Sistema</th><th style="text-align: center;">Qtd. Contada</th><th style="text-align: center;">Diferença</th><th>Ações</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+                <div class="form-group" style="margin-top: 20px;"><label for="observacoes">Observações Gerais</label><textarea id="observacoes" rows="3"></textarea></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary"><i class="material-icons">check_circle</i> Processar Ajuste de Estoque</button></div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>Histórico de Inventários Realizados</h3>
+            <table>
+                <thead><tr><th>Data</th><th>Responsável</th><th>Motivo</th><th>Observações</th></tr></thead>
+                <tbody id="history-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="product-modal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>Buscar Produto</h3>
+                <button type="button" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-filters">
+                    <input type="text" id="modal-filter-code" placeholder="Filtrar por código de barras ou código interno...">
+                    <input type="text" id="modal-filter-desc" placeholder="Filtrar por descrição...">
+                </div>
+                <div class="modal-table-container">
+                    <table id="modal-products-table">
+                        <thead><tr><th>Cód. / Cód. Barras</th><th>Descrição</th><th>Estoque Atual</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const SUPABASE_URL = 'https://bixobvseaocmhljckskl.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpeG9idnNlYW9jbWhsamNrc2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTgyNjcsImV4cCI6MjA3MDU5NDI2N30.SjChWwpw3zYPa_lJ5Z4axpDExXHSHdq0_pntpfES2jo';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const inventoryForm = document.getElementById('inventory-form');
+        const inventoryTableBody = document.getElementById('inventory-table').querySelector('tbody');
+        const historyTableBody = document.getElementById('history-table-body');
+        const addItemBtn = document.getElementById('add-item-btn');
+        const productModal = document.getElementById('product-modal');
+        const modalProductsTableBody = document.getElementById('modal-products-table').querySelector('tbody');
+
+        let allProducts = [];
+        let currentRowForProductSelection = null;
+
+        async function carregarProdutosParaModal() {
+            const { data, error } = await supabaseClient
+                .from('produtos')
+                // [CORREÇÃO 1 de 3] Corrigido de 'cod_barras' para 'codigo_barras'
+                .select('id, codigo_barras, descricao, quantidade_estoque')
+                .order('descricao');
+            if (error) {
+                console.error("Erro ao carregar produtos:", error);
+                return;
+            }
+            allProducts = data;
+            renderizarProdutosNoModal(allProducts);
+        }
+
+        function renderizarProdutosNoModal(products) {
+            modalProductsTableBody.innerHTML = '';
+            products.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.dataset.productId = p.id;
+                tr.innerHTML = `
+                    <td>${p.codigo_barras || p.id}</td>
+                    <td>${p.descricao}</td>
+                    <td>${p.quantidade_estoque || 0}</td>
+                `;
+                modalProductsTableBody.appendChild(tr);
+            });
+        }
+
+        function abrirModalProdutos(row) {
+            currentRowForProductSelection = row;
+            productModal.style.display = 'flex';
+        }
+
+        function fecharModalProdutos() {
+            productModal.style.display = 'none';
+        }
+
+        function selecionarProduto(productId) {
+            const product = allProducts.find(p => p.id == productId);
+            if (!product || !currentRowForProductSelection) return;
+            const productCell = currentRowForProductSelection.querySelector('.product-cell');
+            const qtdSistemaCell = currentRowForProductSelection.querySelector('.qtd-sistema-cell');
+            productCell.innerHTML = `<span class="product-name-cell">${product.descricao}</span>`;
+            productCell.dataset.productId = product.id;
+            qtdSistemaCell.textContent = product.quantidade_estoque || 0;
+            const qtdContadaInput = currentRowForProductSelection.querySelector('.qtd-contada-input');
+            qtdContadaInput.dispatchEvent(new Event('input'));
+            fecharModalProdutos();
+        }
+
+        function adicionarLinhaProduto() {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="product-cell"><div class="search-product"><i class="material-icons search-icon">search</i><span>Clique na lupa para buscar...</span></div></td>
+                <td class="qtd-sistema-cell" style="text-align: center;">-</td>
+                <td style="text-align: center;"><input type="number" class="qtd-contada-input" min="0"></td>
+                <td class="diferenca-cell" style="text-align: center;">-</td>
+                <td class="actions-cell"><i class="material-icons delete delete-row-icon">delete</i></td>
+            `;
+            inventoryTableBody.appendChild(tr);
+        }
+        
+        function calcularDiferenca(row) {
+            const qtdSistemaCell = row.querySelector('.qtd-sistema-cell');
+            const qtdContadaInput = row.querySelector('.qtd-contada-input');
+            const diferencaCell = row.querySelector('.diferenca-cell');
+            const qtdSistema = parseInt(qtdSistemaCell.textContent) || 0;
+            const qtdContada = parseInt(qtdContadaInput.value);
+            if (isNaN(qtdContada)) {
+                diferencaCell.textContent = '-';
+                diferencaCell.className = 'diferenca-cell';
+                return;
+            }
+            const diferenca = qtdContada - qtdSistema;
+            diferencaCell.textContent = diferenca;
+            diferencaCell.className = 'diferenca-cell';
+            if (diferenca > 0) {
+                diferencaCell.classList.add('diferenca-positiva');
+            } else if (diferenca < 0) {
+                diferencaCell.classList.add('diferenca-negativa');
+            }
+        }
+        
+        async function processarAjuste(event) {
+            event.preventDefault();
+            if (!confirm("Tem certeza que deseja processar este ajuste? As quantidades de estoque dos produtos serão atualizadas.")) return;
+            const dataContagem = document.getElementById('data-contagem').value;
+            const responsavel = document.getElementById('responsavel').value;
+            const motivoAjuste = document.getElementById('motivo-ajuste').value;
+            const observacoes = document.getElementById('observacoes').value;
+            if (!dataContagem || !responsavel) {
+                alert("Por favor, preencha a Data e o Responsável pela Contagem.");
+                return;
+            }
+            const itemRows = inventoryTableBody.querySelectorAll('tr');
+            if (itemRows.length === 0) {
+                alert("Adicione pelo menos um produto para ajustar.");
+                return;
+            }
+            const { data: inventarioData, error: inventarioError } = await supabaseClient.from('inventarios').insert([{ data_contagem: dataContagem, responsavel, motivo_ajuste: motivoAjuste, observacoes }]).select().single();
+            if (inventarioError) {
+                alert("Erro ao criar o registro do inventário: " + inventarioError.message);
+                return;
+            }
+            const inventarioId = inventarioData.id;
+            const itensParaInserir = [];
+            const produtosParaAtualizar = [];
+            for (const row of itemRows) {
+                const productId = row.querySelector('.product-cell').dataset.productId;
+                const qtdSistema = parseInt(row.querySelector('.qtd-sistema-cell').textContent) || 0;
+                const qtdContada = parseInt(row.querySelector('.qtd-contada-input').value);
+                if (!productId || isNaN(qtdContada)) {
+                    alert("Todas as linhas devem ter um produto selecionado e uma quantidade contada válida.");
+                    return;
+                }
+                itensParaInserir.push({ inventario_id: inventarioId, produto_id: productId, qtd_sistema: qtdSistema, qtd_contada: qtdContada, diferenca: qtdContada - qtdSistema });
+                produtosParaAtualizar.push({ id: productId, quantidade_estoque: qtdContada });
+            }
+            const { error: itensError } = await supabaseClient.from('inventario_itens').insert(itensParaInserir);
+            if (itensError) {
+                alert("Erro ao salvar os itens do inventário: " + itensError.message);
+                return;
+            }
+            const { error: updateError } = await supabaseClient.from('produtos').upsert(produtosParaAtualizar);
+            if (updateError) {
+                alert("Erro ao atualizar o estoque dos produtos: " + updateError.message);
+                return;
+            }
+            alert("Ajuste de inventário processado com sucesso!");
+            inventoryForm.reset();
+            inventoryTableBody.innerHTML = '';
+            document.getElementById('data-contagem').value = new Date().toISOString().split('T')[0];
+            carregarHistoricoInventarios();
+        }
+
+        async function carregarHistoricoInventarios() {
+            const { data, error } = await supabaseClient.from('inventarios').select('*').order('data_contagem', { ascending: false });
+            if(error) { console.error("Erro ao carregar histórico:", error); return; }
+            historyTableBody.innerHTML = '';
+            data.forEach(inv => {
+                const tr = document.createElement('tr');
+                const dataFormatada = new Date(inv.data_contagem + 'T00:00:00-03:00').toLocaleDateString('pt-BR');
+                tr.innerHTML = `<td>${dataFormatada}</td><td>${inv.responsavel}</td><td>${inv.motivo_ajuste}</td><td>${inv.observacoes || '-'}</td>`;
+                historyTableBody.appendChild(tr);
+            });
+        }
+
+        addItemBtn.addEventListener('click', adicionarLinhaProduto);
+        inventoryTableBody.addEventListener('click', (event) => {
+            if (event.target.classList.contains('search-icon')) abrirModalProdutos(event.target.closest('tr'));
+            if (event.target.classList.contains('delete-row-icon')) event.target.closest('tr').remove();
+        });
+        inventoryTableBody.addEventListener('input', (event) => {
+            if (event.target.classList.contains('qtd-contada-input')) calcularDiferenca(event.target.closest('tr'));
+        });
+        productModal.querySelector('.modal-close-btn').addEventListener('click', fecharModalProdutos);
+        modalProductsTableBody.addEventListener('click', (event) => {
+            const row = event.target.closest('tr');
+            if(row && row.dataset.productId) selecionarProduto(row.dataset.productId);
+        });
+        
+        ['modal-filter-code', 'modal-filter-desc'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                const codeFilter = document.getElementById('modal-filter-code').value.toLowerCase();
+                const descFilter = document.getElementById('modal-filter-desc').value.toLowerCase();
+                const filtered = allProducts.filter(p => {
+                    // [CORREÇÃO 3 de 3] Corrigido de 'p.cod_barras' para 'p.codigo_barras'
+                    const code = String(p.codigo_barras || p.id).toLowerCase();
+                    const desc = p.descricao.toLowerCase();
+                    return code.includes(codeFilter) && desc.includes(descFilter);
+                });
+                renderizarProdutosNoModal(filtered);
+            });
+        });
+        
+        inventoryForm.addEventListener('submit', processarAjuste);
+
+        function init() {
+            document.getElementById('data-contagem').value = new Date().toISOString().split('T')[0];
+            carregarProdutosParaModal();
+            carregarHistoricoInventarios();
+        }
+        init();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movimentação</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #333;
+            --border-color: #dee2e6;
+            --background-color: #f8f9fa;
+            --text-color-light: #6c757d;
+            --accent-color: #007bff;
+        }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--background-color); color: var(--primary-color); padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .logo-container { text-align: center; margin-bottom: 0px; }
+        .logo-container img { max-width: 90px; height: auto; }
+        .panel-header { text-align: center; margin-bottom: 30px; }
+        .panel-header h1 { font-size: 28px; font-weight: 500; margin: 0; }
+        .panel-header p { color: var(--text-color-light); margin: 5px 0 0; }
+        .card-header { display: flex; justify-content: center; align-items: center; margin-bottom: 20px; }
+        .actions button { padding: 10px 20px; font-size: 14px; border-radius: 5px; border: none; cursor: pointer; font-weight: 500; margin-left: 10px; display: inline-flex; align-items: center; gap: 8px; transition: background-color 0.2s; }
+        .btn-entrada { background-color: #28a745; color: white; }
+        .btn-entrada:hover { background-color: #218838; }
+        .btn-saida { background-color: #dc3545; color: white; }
+        .btn-saida:hover { background-color: #c82333; }
+        .btn-print { background-color: var(--accent-color); color: white; }
+        .btn-print:hover { background-color: #0069d9; }
+        .btn-email { background-color: #6c757d; color: white; }
+        .btn-email:hover { background-color: #5a6268; }
+        .filters { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; align-items: center; }
+        .filter-control { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 5px; background-color: #fff; transition: box-shadow 0.2s; }
+        .filter-control:focus-within { box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); border-color: #80bdff; }
+        .search-bar { flex: 3 1 250px; padding-left: 10px; }
+        .search-bar .material-icons { color: var(--text-color-light); }
+        .search-bar input, .filters select { border: none; padding: 10px; font-size: 14px; background: none; outline: none; }
+        .search-bar input { width: 100%; }
+        .select-wrapper { flex: 1 1 120px; position: relative; }
+        .select-wrapper .material-icons { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-color-light); pointer-events: none; }
+        .filters select { width: 100%; -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: pointer; }
+        .btn-limpar { padding: 10px 15px; font-size: 14px; border-radius: 5px; border: 1px solid var(--border-color); cursor: pointer; font-weight: 500; background-color: #fff; color: var(--primary-color); display: inline-flex; align-items: center; gap: 6px; transition: background-color 0.2s; margin-left: auto; }
+        .btn-limpar:hover { background-color: #e9ecef; }
+        .btn-limpar .material-icons { font-size: 18px; }
+        .table-wrapper { overflow-x: auto; }
+        .history-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .history-table th, .history-table td { text-align: center; padding: 12px 10px; border-bottom: 1px solid #eee; vertical-align: middle; white-space: normal; word-wrap: break-word; }
+        
+        /* ALTERAÇÃO CSS: Reordenada a definição de largura das colunas */
+        .history-table th:nth-child(1) { width: 8%; }  /* Pedido */
+        .history-table th:nth-child(2) { width: 12%; } /* Data e Hora */
+        .history-table th:nth-child(3) { width: 7%; }  /* Tipo */
+        .history-table th:nth-child(4) { width: 14%; } /* Origem/Destino */
+        .history-table th:nth-child(5) { width: 15%; } /* Produto */
+        .history-table th:nth-child(6) { width: 5%; }  /* Qtd */
+        .history-table th:nth-child(7) { width: 8%; }  /* Estado */
+        .history-table th:nth-child(8) { width: 8%; }  /* NF */
+        .history-table th:nth-child(9) { width: 8%; }  /* Série */
+        .history-table th:nth-child(10) { width: 5%; } /* Observação */
+        .history-table th:nth-child(11) { width: 5%; } /* Ações */
+
+        .history-table th { background-color: #f8f9fa; font-weight: 500; color: #555; position: sticky; top: 0; }
+        th[data-sort-by] { cursor: pointer; user-select: none; transition: background-color 0.2s; }
+        th[data-sort-by]:hover { background-color: #e9ecef; }
+        th .sort-icon { font-size: 16px; vertical-align: middle; opacity: 0.5; margin-left: 4px; }
+        th.active .sort-icon { opacity: 1; }
+        .status-tag { padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .status-excelente { background-color: #e9f7ec; color: #28a745; }
+        .tipo-entrada { color: #28a745; font-weight: 500; }
+        .tipo-saida { color: #dc3545; font-weight: 500; }
+        .table-footer { padding-top: 15px; color: var(--text-color-light); font-size: 14px; border-top: 1px solid #eee; margin-top: 10px; }
+        .obs-icon { color: var(--accent-color); cursor: help; vertical-align: middle; }
+        .btn-delete { background: none; border: none; cursor: pointer; color: #dc3545; padding: 4px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
+        .btn-delete:hover { background-color: #fbe9e7; }
+        .btn-delete .material-icons { font-size: 20px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal-container { background-color: #fff; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.1); width: 90%; max-width: 500px; overflow: hidden; }
+        .modal-header { padding: 20px; background-color: #f8f9fa; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { margin: 0; font-size: 18px; font-weight: 500; }
+        .modal-close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #888; }
+        .modal-body { padding: 20px; overflow-y: auto; max-height: 70vh; }
+        .form-row { display: flex; gap: 15px; }
+        .form-group { margin-bottom: 15px; flex: 1; }
+        label { display: block; margin-bottom: 5px; font-size: 14px; font-weight: 500; color: #495057; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2); }
+        .char-limit-info { font-size: 12px; color: var(--text-color-light); margin-top: 4px; }
+        .modal-footer { padding: 15px 20px; background-color: #f8f9fa; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-footer button { padding: 10px 20px; font-size: 14px; border-radius: 5px; border: 1px solid #ccc; cursor: pointer; font-weight: 500; }
+        .btn-cancel { background-color: #e9ecef; }
+        .btn-save { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container">
+            <img src="https://bixobvseaocmhljckskl.supabase.co/storage/v1/object/public/assets_publicos/logo-redonda-prefeitura.png" alt="Logo da Prefeitura de Igarassu">
+        </div>
+        <div class="panel-header">
+            <h1>Painel de Movimentação de Mercadorias</h1>
+            <p>Sistema para controle de entrada e saída de produtos</p>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div class="actions">
+                    <button id="btn-registrar-entrada" class="btn-entrada"><i class="material-icons">add_circle_outline</i> Registrar Entrada</button>
+                    <button id="btn-registrar-saida" class="btn-saida"><i class="material-icons">remove_circle_outline</i> Registrar Saída</button>
+                    <button id="btn-imprimir-relatorio" class="btn-print"><i class="material-icons">print</i> Imprimir Relatório</button>
+                    <button id="btn-enviar-email" class="btn-email"><i class="material-icons">email</i> Enviar Relatório por Email</button>
+                </div>
+            </div>
+            <div class="filters">
+                <div class="search-bar filter-control"><i class="material-icons">search</i><input type="text" id="filtro-geral" placeholder="Buscar por produto, NF, pedido..."></div>
+                <div class="select-wrapper filter-control"><select id="filtro-dia"><option value="">Dia</option></select><i class="material-icons">expand_more</i></div>
+                <div class="select-wrapper filter-control"><select id="filtro-mes"><option value="">Mês</option></select><i class="material-icons">expand_more</i></div>
+                <div class="select-wrapper filter-control"><select id="filtro-ano"><option value="">Ano</option></select><i class="material-icons">expand_more</i></div>
+                <div class="select-wrapper filter-control"><select id="filtro-tipo"><option value="">Tipo</option><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option></select><i class="material-icons">expand_more</i></div>
+                <div class="select-wrapper filter-control"><select id="filtro-estado"><option value="">Estado</option><option>Excelente</option><option>Bom</option><option>Regular</option><option>Ruim</option><option>Péssimo</option></select><i class="material-icons">expand_more</i></div>
+                <button id="btn-limpar-filtros" class="btn-limpar"><i class="material-icons">clear</i>Limpar</button>
+            </div>
+            <div class="table-wrapper">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th data-sort-by="numero_pedido">Nº Pedido <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th data-sort-by="created_at">Data e Hora do Registro <i class="material-icons sort-icon">arrow_downward</i></th>
+                            <th data-sort-by="tipo_movimentacao">Tipo <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th data-sort-by="origem_destino">Origem/Destino <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th data-sort-by="produtos.descricao">Produto <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th data-sort-by="quantidade">Qtd <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th data-sort-by="estado_conservacao">Estado <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th data-sort-by="nota_fiscal">NF <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th data-sort-by="numero_serie">Série <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th data-sort-by="observacao">Observação <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body"></tbody>
+                </table>
+            </div>
+            <div class="table-footer" id="table-summary"></div>
+        </div>
+    </div>
+
+    <div id="modal-movimentacao" class="modal-overlay">
+        <div class="modal-container">
+            <header class="modal-header">
+                <h3 id="modal-title">Nova Movimentação</h3>
+                <button class="modal-close-btn">&times;</button>
+            </header>
+            <div class="modal-body">
+                <form id="form-movimentacao">
+                    <div class="form-row">
+                        <div class="form-group"><label for="data-movimentacao">Data*</label><input type="date" id="data-movimentacao" required></div>
+                        <div class="form-group"><label for="tipo-movimentacao">Tipo*</label><select id="tipo-movimentacao" required><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option></select></div>
+                    </div>
+                    <div class="form-group"><label for="origem-destino" id="label-origem-destino">Origem/Destino*</label><select id="origem-destino" required><option value="">Carregando...</option></select></div>
+                    <div class="form-group"><label for="produto">Produto*</label><select id="produto" required><option value="">Carregando...</option></select></div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="quantidade">Quantidade*</label><input type="number" id="quantidade" min="1" required></div>
+                        <div class="form-group"><label for="estado-conservacao">Estado*</label><select id="estado-conservacao" required><option>Excelente</option><option>Bom</option><option>Regular</option><option>Ruim</option><option>Péssimo</option></select></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="numero-pedido">Nº do Pedido</label><input type="text" id="numero-pedido" placeholder="Ex: PED-2023-001"></div>
+                        <div class="form-group"><label for="nota-fiscal">Nota Fiscal</label><input type="text" id="nota-fiscal" placeholder="Ex: NF-123456"></div>
+                    </div>
+                    <div class="form-group"><label for="numero-serie">Nº de Série</label><input type="text" id="numero-serie" placeholder="Ex: SN-ABC123"></div>
+                    <div class="form-group">
+                        <label for="observacao">Observação</label>
+                        <textarea id="observacao" rows="2" maxlength="100"></textarea>
+                        <div class="char-limit-info">(Máximo de 100 caracteres)</div>
+                    </div>
+                </form>
+            </div>
+            <footer class="modal-footer">
+                <button type="button" class="btn-cancel">Cancelar</button>
+                <button type="submit" form="form-movimentacao" class="btn-save">Adicionar Movimentação</button>
+            </footer>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const SUPABASE_URL = 'https://bixobvseaocmhljckskl.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpeG9idnNlYW9jbWhsamNrc2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTgyNjcsImV4cCI6MjA3MDU5NDI2N30.SjChWwpw3zYPa_lJ5Z4axpDExXHSHdq0_pntpfES2jo';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const historyTableBody = document.getElementById('history-table-body');
+        const modal = document.getElementById('modal-movimentacao');
+        const formMovimentacao = document.getElementById('form-movimentacao');
+        const selectProdutoModal = document.getElementById('produto');
+        const selectOrigemDestinoModal = document.getElementById('origem-destino');
+        const tipoMovimentacaoSelect = document.getElementById('tipo-movimentacao');
+        const labelOrigemDestino = document.getElementById('label-origem-destino');
+        const btnNovaMovimentacaoEntrada = document.getElementById('btn-registrar-entrada');
+        const btnNovaMovimentacaoSaida = document.getElementById('btn-registrar-saida');
+        const btnImprimirRelatorio = document.getElementById('btn-imprimir-relatorio');
+        const btnEnviarEmail = document.getElementById('btn-enviar-email');
+        const btnCloseModal = modal.querySelector('.modal-close-btn');
+        const btnCancelModal = modal.querySelector('.btn-cancel');
+        const filtroGeralInput = document.getElementById('filtro-geral');
+        const filtroTipoSelect = document.getElementById('filtro-tipo');
+        const filtroEstadoSelect = document.getElementById('filtro-estado');
+        const filtroDiaSelect = document.getElementById('filtro-dia');
+        const filtroMesSelect = document.getElementById('filtro-mes');
+        const filtroAnoSelect = document.getElementById('filtro-ano');
+        const btnLimparFiltros = document.getElementById('btn-limpar-filtros');
+
+        let sortState = { column: 'created_at', ascending: false };
+        let allMovements = [];
+        let currentlyDisplayedMovements = []; 
+        let listaDeProdutos = [], listaDeSetores = [], listaDeFornecedores = [];
+
+        const abrirModal = (tipo) => {
+            formMovimentacao.reset();
+            tipoMovimentacaoSelect.value = tipo;
+            document.getElementById('data-movimentacao').valueAsDate = new Date();
+            atualizarCampoOrigemDestino();
+            modal.style.display = 'flex';
+        };
+        const fecharModal = () => { modal.style.display = 'none'; };
+
+        function renderizarMovimentacoes(movimentacoes) {
+            currentlyDisplayedMovements = movimentacoes;
+            historyTableBody.innerHTML = '';
+            
+            movimentacoes.sort((a, b) => {
+                const col = sortState.column;
+                let valA = col.includes('.') ? a[col.split('.')[0]]?.[col.split('.')[1]] : a[col];
+                let valB = col.includes('.') ? b[col.split('.')[0]]?.[col.split('.')[1]] : b[col];
+                if (valA === null || valA === undefined) return 1;
+                if (valB === null || valB === undefined) return -1;
+                if (col === 'created_at') { return (new Date(valB) - new Date(valA)) * (sortState.ascending ? -1 : 1); }
+                if (String(valA).toLowerCase() < String(valB).toLowerCase()) return sortState.ascending ? -1 : 1;
+                if (String(valA).toLowerCase() > String(valB).toLowerCase()) return sortState.ascending ? 1 : -1;
+                return 0;
+            });
+
+            movimentacoes.forEach(mov => {
+                const tipoClasse = mov.tipo_movimentacao === 'ENTRADA' ? 'tipo-entrada' : 'tipo-saida';
+                const estado = (mov.estado_conservacao || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const estadoClasse = `status-${estado}`;
+                const dataRegistro = mov.created_at ? new Date(mov.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
+                const observacaoHtml = mov.observacao ? `<i class="material-icons obs-icon" title="${mov.observacao.replace(/"/g, '&quot;')}">comment</i>` : '-';
+                
+                const row = document.createElement('tr');
+                // ALTERAÇÃO JAVASCRIPT: Ordem da célula (td) do pedido alterada para o início
+                row.innerHTML = `
+                    <td>${mov.numero_pedido || '-'}</td>
+                    <td>${dataRegistro}</td>
+                    <td class="${tipoClasse}">${mov.tipo_movimentacao}</td>
+                    <td>${mov.origem_destino || '-'}</td>
+                    <td>${mov.produtos?.descricao || 'Produto não encontrado'}</td>
+                    <td>${mov.quantidade}</td>
+                    <td><span class="status-tag ${estadoClasse}">${mov.estado_conservacao || '-'}</span></td>
+                    <td>${mov.nota_fiscal || '-'}</td>
+                    <td>${mov.numero_serie || '-'}</td>
+                    <td>${observacaoHtml}</td>
+                    <td><button class="btn-delete" data-id="${mov.id}" title="Excluir Movimentação"><i class="material-icons">delete</i></button></td>
+                `;
+                historyTableBody.appendChild(row);
+            });
+            const total = movimentacoes.length;
+            const entradas = movimentacoes.filter(d => d.tipo_movimentacao === 'ENTRADA').length;
+            document.getElementById('table-summary').textContent = `Exibindo: ${total} de ${allMovements.length} movimentações | Entradas: ${entradas} | Saídas: ${total - entradas}`;
+        }
+        
+        async function carregarMovimentacoesDoSupabase() {
+            historyTableBody.innerHTML = `<tr><td colspan="11">Carregando histórico...</td></tr>`;
+            const { data, error } = await supabaseClient.from('movimentacao_estoque').select(`*, produtos(descricao)`).order('created_at', { ascending: false });
+            if (error) { 
+                console.error(error); 
+                historyTableBody.innerHTML = `<tr><td colspan="11" style="color: red; font-weight: bold;">Erro ao carregar: ${error.message}</td></tr>`; 
+                return; 
+            }
+            allMovements = data;
+            aplicarFiltrosEOrdenacao();
+        }
+
+        async function carregarDadosParaModal() {
+            const [prodRes, setorRes, fornRes] = await Promise.all([
+                supabaseClient.from('produtos').select('id, descricao').order('descricao'),
+                supabaseClient.from('setores').select('id, nome_setor').order('nome_setor'),
+                supabaseClient.from('fornecedores').select('id, razao_social').order('razao_social')
+            ]);
+            if(prodRes.error) console.error(prodRes.error); else {
+                listaDeProdutos = prodRes.data;
+                selectProdutoModal.innerHTML = '<option value="">Selecione o produto</option>';
+                listaDeProdutos.forEach(p => selectProdutoModal.innerHTML += `<option value="${p.id}">${p.descricao}</option>`);
+            }
+            if(setorRes.error) console.error(setorRes.error); else { listaDeSetores = setorRes.data; }
+            if(fornRes.error) console.error(fornRes.error); else { listaDeFornecedores = fornRes.data; }
+            atualizarCampoOrigemDestino();
+        }
+
+        function atualizarCampoOrigemDestino() {
+            const tipo = tipoMovimentacaoSelect.value;
+            selectOrigemDestinoModal.innerHTML = '';
+            if (tipo === 'ENTRADA') {
+                labelOrigemDestino.textContent = 'Fornecedor*';
+                selectOrigemDestinoModal.innerHTML = '<option value="">Selecione o fornecedor</option>';
+                listaDeFornecedores.forEach(f => selectOrigemDestinoModal.innerHTML += `<option value="${f.id}">${f.razao_social}</option>`);
+            } else {
+                labelOrigemDestino.textContent = 'Unidade de Destino*';
+                selectOrigemDestinoModal.innerHTML = '<option value="">Selecione o setor</option>';
+                listaDeSetores.forEach(s => selectOrigemDestinoModal.innerHTML += `<option value="${s.id}">${s.nome_setor}</option>`);
+            }
+        }
+
+        function popularFiltrosDeData() {
+            for (let dia = 1; dia <= 31; dia++) filtroDiaSelect.innerHTML += `<option value="${dia}">${dia}</option>`;
+            const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            meses.forEach((mes, index) => filtroMesSelect.innerHTML += `<option value="${index + 1}">${mes}</option>`);
+            const anoAtual = new Date().getFullYear();
+            for (let ano = anoAtual; ano >= anoAtual - 5; ano--) filtroAnoSelect.innerHTML += `<option value="${ano}">${ano}</option>`;
+        }
+        
+        function aplicarFiltrosEOrdenacao() {
+            const texto = filtroGeralInput.value.toLowerCase();
+            const tipo = filtroTipoSelect.value;
+            const estado = filtroEstadoSelect.value;
+            const dia = filtroDiaSelect.value;
+            const mes = filtroMesSelect.value;
+            const ano = filtroAnoSelect.value;
+            const dadosFiltrados = allMovements.filter(mov => {
+                const dataMov = new Date(mov.data_movimentacao);
+                const buscaMatch = texto ? 
+                    (mov.produtos?.descricao?.toLowerCase().includes(texto)) || 
+                    (mov.origem_destino?.toLowerCase().includes(texto)) || 
+                    (mov.nota_fiscal?.toLowerCase().includes(texto)) || 
+                    (mov.numero_pedido?.toLowerCase().includes(texto)) || 
+                    (mov.numero_serie?.toLowerCase().includes(texto)) 
+                    : true;
+                const tipoMatch = tipo ? mov.tipo_movimentacao === tipo : true;
+                const estadoMatch = estado ? mov.estado_conservacao === estado : true;
+                const diaMatch = dia ? dataMov.getUTCDate() == dia : true;
+                const mesMatch = mes ? (dataMov.getUTCMonth() + 1) == mes : true;
+                const anoMatch = ano ? dataMov.getUTCFullYear() == ano : true;
+                return buscaMatch && tipoMatch && estadoMatch && diaMatch && mesMatch && anoMatch;
+            });
+            renderizarMovimentacoes(dadosFiltrados);
+        }
+
+        function atualizarIconesDeOrdenacao() {
+            document.querySelectorAll('th[data-sort-by]').forEach(th => {
+                const icon = th.querySelector('.sort-icon');
+                th.classList.remove('active');
+                if (th.dataset.sortBy === sortState.column) {
+                    th.classList.add('active');
+                    icon.textContent = sortState.ascending ? 'arrow_upward' : 'arrow_downward';
+                } else { icon.textContent = 'unfold_more'; }
+            });
+        }
+        
+        function generateEmailBody(data) {
+            // ALTERAÇÃO JAVASCRIPT: Ordem da coluna do pedido alterada no email
+            let tableHtml = `<p>Segue o relatório de movimentações de mercadorias.</p><table border="1" cellpadding="7" cellspacing="0" style="border-collapse: collapse; width: 100%; font-family: sans-serif;"><thead><tr style="background-color: #f0f0f0;"><th>Nº Pedido</th><th>Data e Hora</th><th>Tipo</th><th>Origem/Destino</th><th>Produto</th><th>Qtd</th><th>Estado</th><th>NF</th><th>Série</th></tr></thead><tbody>`;
+            data.forEach(mov => {
+                const dataRegistro = new Date(mov.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                tableHtml += `<tr><td>${mov.numero_pedido || '-'}</td><td>${dataRegistro}</td><td>${mov.tipo_movimentacao}</td><td>${mov.origem_destino || '-'}</td><td>${mov.produtos?.descricao || '-'}</td><td>${mov.quantidade}</td><td>${mov.estado_conservacao || '-'}</td><td>${mov.nota_fiscal || '-'}</td><td>${mov.numero_serie || '-'}</td></tr>`;
+            });
+            tableHtml += `</tbody></table>`;
+            return tableHtml;
+        }
+
+        btnNovaMovimentacaoEntrada.addEventListener('click', () => abrirModal('ENTRADA'));
+        btnNovaMovimentacaoSaida.addEventListener('click', () => abrirModal('SAIDA'));
+        btnCloseModal.addEventListener('click', fecharModal);
+        btnCancelModal.addEventListener('click', fecharModal);
+        btnImprimirRelatorio.addEventListener('click', () => window.print());
+        tipoMovimentacaoSelect.addEventListener('change', atualizarCampoOrigemDestino);
+
+        btnLimparFiltros.addEventListener('click', () => {
+            filtroGeralInput.value = ''; filtroTipoSelect.value = ''; filtroEstadoSelect.value = '';
+            filtroDiaSelect.value = ''; filtroMesSelect.value = ''; filtroAnoSelect.value = '';
+            aplicarFiltrosEOrdenacao();
+        });
+
+        formMovimentacao.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const btnSave = modal.querySelector('.btn-save');
+            btnSave.disabled = true; btnSave.textContent = 'Salvando...';
+            try {
+                const tipo = document.getElementById('tipo-movimentacao').value;
+                const origemDestinoSelect = document.getElementById('origem-destino');
+                const origemDestinoNome = origemDestinoSelect.options[origemDestinoSelect.selectedIndex].text;
+                const origemDestinoId = origemDestinoSelect.value;
+                
+                const novaMovimentacao = {
+                    data_movimentacao: document.getElementById('data-movimentacao').value,
+                    tipo_movimentacao: tipo,
+                    origem_destino: origemDestinoNome,
+                    produto_id: document.getElementById('produto').value,
+                    quantidade: document.getElementById('quantidade').value,
+                    estado_conservacao: document.getElementById('estado-conservacao').value,
+                    numero_pedido: document.getElementById('numero-pedido').value,
+                    nota_fiscal: document.getElementById('nota-fiscal').value,
+                    numero_serie: document.getElementById('numero-serie').value,
+                    observacao: document.getElementById('observacao').value,
+                    setor_id: tipo === 'SAIDA' ? origemDestinoId : null,
+                    fornecedor_id: tipo === 'ENTRADA' ? origemDestinoId : null
+                };
+                const { error } = await supabaseClient.from('movimentacao_estoque').insert(novaMovimentacao);
+                if (error) { throw error; }
+                alert("Movimentação registrada com sucesso!");
+                fecharModal();
+                await carregarMovimentacoesDoSupabase();
+            } catch (error) {
+                alert("Erro ao salvar: " + error.message);
+            } finally {
+                btnSave.disabled = false;
+                btnSave.textContent = 'Adicionar Movimentação';
+            }
+        });
+        
+        [filtroGeralInput, filtroTipoSelect, filtroEstadoSelect, filtroDiaSelect, filtroMesSelect, filtroAnoSelect].forEach(el => {
+            el.addEventListener('change', aplicarFiltrosEOrdenacao);
+            if (el.tagName !== 'SELECT') el.addEventListener('input', aplicarFiltrosEOrdenacao);
+        });
+
+        document.querySelector('thead').addEventListener('click', (event) => {
+            const th = event.target.closest('th[data-sort-by]');
+            if (!th) return;
+            const novaColuna = th.dataset.sortBy;
+            if (sortState.column === novaColuna) { sortState.ascending = !sortState.ascending; } else { sortState.column = novaColuna; sortState.ascending = true; }
+            atualizarIconesDeOrdenacao();
+            aplicarFiltrosEOrdenacao();
+        });
+
+        historyTableBody.addEventListener('click', async (event) => {
+            const deleteButton = event.target.closest('.btn-delete');
+            if (!deleteButton) return;
+            const movementId = deleteButton.dataset.id;
+            if (confirm('Tem certeza que deseja excluir esta movimentação? Esta ação não pode ser desfeita.')) {
+                try {
+                    const { error } = await supabaseClient.from('movimentacao_estoque').delete().eq('id', movementId);
+                    if (error) { throw error; }
+                    alert('Movimentação excluída com sucesso!');
+                    await carregarMovimentacoesDoSupabase();
+                } catch (error) { alert('Erro ao excluir a movimentação: ' + error.message); }
+            }
+        });
+        
+        btnEnviarEmail.addEventListener('click', () => {
+            if (currentlyDisplayedMovements.length === 0) { alert('Não há dados para enviar no relatório.'); return; }
+            const subject = "Relatório de Movimentação de Mercadorias";
+            const emailBody = generateEmailBody(currentlyDisplayedMovements);
+            window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+        });
+        
+        async function init() {
+            popularFiltrosDeData();
+            await carregarDadosParaModal();
+            await carregarMovimentacoesDoSupabase();
+            atualizarIconesDeOrdenacao();
+        }
+        init();
+    });
+    </script>
+</body>
+</html>

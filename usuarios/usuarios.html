@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuários e Permissões</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #333;
+            --accent-color: #007bff;
+            --background-color: #f8f9fa;
+            --card-bg-color: #ffffff;
+            --text-color-light: #6c757d;
+            --border-color: #dee2e6;
+        }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--background-color); color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .page-header { text-align: center; margin-bottom: 20px; }
+        .page-header h1 { font-weight: 500; }
+        .page-header p { color: var(--text-color-light); }
+        .btn { padding: 12px 20px; font-size: 14px; border-radius: 5px; border: none; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; transition: background-color 0.2s; text-decoration: none; }
+        .btn-back-fixed { position: absolute; top: 20px; left: 20px; z-index: 10; background-color: #fff; color: var(--text-color-light); border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .btn-back-fixed:hover { background-color: #e9ecef; }
+        .card { background-color: var(--card-bg-color); padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-primary { background-color: var(--accent-color); color: white; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        th { background-color: #f8f9fa; font-weight: 500; }
+        .actions-cell i { cursor: pointer; margin: 0 5px; }
+        .actions-cell .material-icons.edit { color: var(--accent-color); }
+        .actions-cell .material-icons.delete { color: #dc3545; }
+        .role-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; color: #fff; }
+        .role-administrador { background-color: #dc3545; }
+        .role-almoxarife { background-color: var(--accent-color); }
+        .role-requisitante { background-color: #6c757d; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-container { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--border-color); box-sizing: border-box; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <a href="../menu.html" class="btn btn-back-fixed"><i class="material-icons">arrow_back</i> Voltar ao Menu</a>
+    
+    <div class="page-container">
+        <div class="page-header">
+            <h1>Usuários e Permissões</h1>
+            <p>Gerencie o acesso e as permissões de cada usuário ao sistema.</p>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3>Usuários do Sistema</h3>
+                <button class="btn btn-primary" id="new-user-btn"><i class="material-icons">person_add</i> Cadastrar Usuário</button>
+            </div>
+            <table>
+                <thead><tr><th>Nome Completo</th><th>E-mail</th><th>Função (Role)</th><th>Ações</th></tr></thead>
+                <tbody id="users-table-body">
+                    <tr><td colspan="4" style="text-align: center;">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="user-modal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="modal-title">Cadastrar Novo Usuário</h3>
+                <button type="button" class="modal-close-btn">&times;</button>
+            </div>
+            <form id="user-form">
+                <input type="hidden" id="user-id">
+                <div class="form-group"><label for="full_name">Nome Completo</label><input type="text" id="full_name" required></div>
+                <div class="form-group"><label for="email">E-mail</label><input type="email" id="email" required></div>
+                <div class="form-group"><label for="password">Senha Inicial</label><input type="password" id="password" required></div>
+                <div class="form-group">
+                    <label for="role">Função (Role)</label>
+                    <select id="role" required>
+                        <option value="Requisitante">Requisitante</option>
+                        <option value="Almoxarife">Almoxarife</option>
+                        <option value="Administrador">Administrador</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn modal-close-btn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="save-user-btn">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const SUPABASE_URL = 'https://bixobvseaocmhljckskl.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpeG9idnNlYW9jbWhsamNrc2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTgyNjcsImV4cCI6MjA3MDU5NDI2N30.SjChWwpw3zYPa_lJ5Z4axpDExXHSHdq0_pntpfES2jo';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const tableBody = document.getElementById('users-table-body');
+    const userModal = document.getElementById('user-modal');
+    const newUserBtn = document.getElementById('new-user-btn');
+    const userForm = document.getElementById('user-form');
+    const closeBtns = document.querySelectorAll('.modal-close-btn');
+
+    // [NOVO] Função para carregar a lista de usuários via Edge Function
+    async function carregarUsuarios() {
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">Carregando usuários...</td></tr>`;
+        try {
+            const { data, error } = await supabaseClient.functions.invoke('gerenciar-usuarios', {
+                method: 'GET',
+            });
+
+            if (error) throw error;
+            
+            tableBody.innerHTML = '';
+            data.forEach(user => {
+                const roleClass = `role-${(user.role || '').toLowerCase().replace(' ', '')}`;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.full_name || '-'}</td>
+                    <td>${user.email}</td>
+                    <td><span class="role-badge ${roleClass}">${user.role}</span></td>
+                    <td class="actions-cell">
+                        <i class="material-icons edit" data-id="${user.id}">edit</i>
+                        <i class="material-icons delete" data-id="${user.id}">delete</i>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+        } catch (error) {
+            console.error("Erro ao carregar usuários:", error);
+            tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Erro ao carregar usuários.</td></tr>`;
+        }
+    }
+    
+    function abrirModal() { userForm.reset(); userModal.style.display = 'flex'; }
+    function fecharModal() { userModal.style.display = 'none'; }
+
+    newUserBtn.addEventListener('click', abrirModal);
+    closeBtns.forEach(btn => btn.addEventListener('click', fecharModal));
+
+    userForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const saveBtn = document.getElementById('save-user-btn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Salvando...';
+
+        const userData = {
+            fullName: document.getElementById('full_name').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+            role: document.getElementById('role').value
+        };
+
+        try {
+            const { data, error } = await supabaseClient.functions.invoke('gerenciar-usuarios', {
+                method: 'POST',
+                body: userData,
+            });
+            if (error) throw error;
+            
+            alert('Usuário cadastrado com sucesso!');
+            fecharModal();
+            await carregarUsuarios();
+        
+        } catch (error) {
+            alert(`Erro ao cadastrar usuário: ${error.message || JSON.stringify(error)}`);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Salvar';
+        }
+    });
+
+    carregarUsuarios();
+});
+</script>
+
+</body>
+</html>
