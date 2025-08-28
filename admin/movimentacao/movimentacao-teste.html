@@ -49,7 +49,6 @@
         .history-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .history-table th, .history-table td { text-align: center; padding: 12px 10px; border-bottom: 1px solid #eee; vertical-align: middle; white-space: normal; word-wrap: break-word; }
         
-        /* ALTERAÇÃO CSS: Reordenada a definição de largura das colunas */
         .history-table th:nth-child(1) { width: 8%; }  /* Pedido */
         .history-table th:nth-child(2) { width: 12%; } /* Data e Hora */
         .history-table th:nth-child(3) { width: 7%; }  /* Tipo */
@@ -65,8 +64,13 @@
         .history-table th { background-color: #f8f9fa; font-weight: 500; color: #555; position: sticky; top: 0; }
         th[data-sort-by] { cursor: pointer; user-select: none; transition: background-color 0.2s; }
         th[data-sort-by]:hover { background-color: #e9ecef; }
-        th .sort-icon { font-size: 16px; vertical-align: middle; opacity: 0.5; margin-left: 4px; }
-        th.active .sort-icon { opacity: 1; }
+        
+        /* ALTERAÇÃO CSS: Estilo para a coluna de ordenação ativa (sem ícone) */
+        th[data-sort-by].active {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
         .status-tag { padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
         .status-excelente { background-color: #e9f7ec; color: #28a745; }
         .tipo-entrada { color: #28a745; font-weight: 500; }
@@ -92,6 +96,24 @@
         .modal-footer button { padding: 10px 20px; font-size: 14px; border-radius: 5px; border: 1px solid #ccc; cursor: pointer; font-weight: 500; }
         .btn-cancel { background-color: #e9ecef; }
         .btn-save { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+        /* ALTERAÇÃO CSS: Estilos para Impressão */
+        @media print {
+            body { padding: 0; background-color: #fff; }
+            .container { max-width: 100%; margin: 0; padding: 0; border: none; box-shadow: none; }
+            .actions, .filters, .btn-limpar, .logo-container, .table-footer { display: none; }
+            .panel-header { margin-bottom: 20px; }
+            .panel-header h1 { font-size: 20px; }
+            .panel-header p { display: none; }
+            .table-wrapper { overflow-x: visible; }
+            .history-table th, .history-table td { font-size: 10px; padding: 8px 5px; }
+
+            /* Oculta a coluna de Ações na impressão */
+            .history-table th:nth-child(11),
+            .history-table td:nth-child(11) {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -100,7 +122,7 @@
             <img src="https://bixobvseaocmhljckskl.supabase.co/storage/v1/object/public/assets_publicos/logo-redonda-prefeitura.png" alt="Logo da Prefeitura de Igarassu">
         </div>
         <div class="panel-header">
-            <h1>Painel de Movimentação de Mercadorias</h1>
+            <h1>Movimentação de Mercadorias</h1>
             <p>Sistema para controle de entrada e saída de produtos</p>
         </div>
         <div class="card">
@@ -125,16 +147,16 @@
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th data-sort-by="numero_pedido">Nº Pedido <i class="material-icons sort-icon">unfold_more</i></th>
-                            <th data-sort-by="created_at">Data e Hora do Registro <i class="material-icons sort-icon">arrow_downward</i></th>
-                            <th data-sort-by="tipo_movimentacao">Tipo <i class="material-icons sort-icon">unfold_more</i></th>
-                            <th data-sort-by="origem_destino">Origem/Destino <i class="material-icons sort-icon">unfold_more</i></th>
-                            <th data-sort-by="produtos.descricao">Produto <i class="material-icons sort-icon">unfold_more</i></th>
-                            <th data-sort-by="quantidade">Qtd <i class="material-icons sort-icon">unfold_more</i></th>
-                            <th data-sort-by="estado_conservacao">Estado <i class="material-icons sort-icon">unfold_more</i></th>
-                            <th data-sort-by="nota_fiscal">NF <i class="material-icons sort-icon">unfold_more</i></th>
-                            <th data-sort-by="numero_serie">Série <i class="material-icons sort-icon">unfold_more</i></th>
-                            <th data-sort-by="observacao">Observação <i class="material-icons sort-icon">unfold_more</i></th>
+                            <th data-sort-by="numero_pedido">Nº Pedido</th>
+                            <th data-sort-by="created_at">Data e Hora do Registro</th>
+                            <th data-sort-by="tipo_movimentacao">Tipo</th>
+                            <th data-sort-by="origem_destino">Origem/Destino</th>
+                            <th data-sort-by="produtos.descricao">Produto</th>
+                            <th data-sort-by="quantidade">Qtd</th>
+                            <th data-sort-by="estado_conservacao">Estado</th>
+                            <th data-sort-by="nota_fiscal">NF</th>
+                            <th data-sort-by="numero_serie">Série</th>
+                            <th data-sort-by="observacao">Observação</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -247,7 +269,6 @@
                 const observacaoHtml = mov.observacao ? `<i class="material-icons obs-icon" title="${mov.observacao.replace(/"/g, '&quot;')}">comment</i>` : '-';
                 
                 const row = document.createElement('tr');
-                // ALTERAÇÃO JAVASCRIPT: Ordem da célula (td) do pedido alterada para o início
                 row.innerHTML = `
                     <td>${mov.numero_pedido || '-'}</td>
                     <td>${dataRegistro}</td>
@@ -344,19 +365,17 @@
             renderizarMovimentacoes(dadosFiltrados);
         }
 
-        function atualizarIconesDeOrdenacao() {
+        // ALTERAÇÃO JAVASCRIPT: Função simplificada para apenas gerenciar a classe 'active'
+        function atualizarEstiloDeOrdenacao() {
             document.querySelectorAll('th[data-sort-by]').forEach(th => {
-                const icon = th.querySelector('.sort-icon');
                 th.classList.remove('active');
                 if (th.dataset.sortBy === sortState.column) {
                     th.classList.add('active');
-                    icon.textContent = sortState.ascending ? 'arrow_upward' : 'arrow_downward';
-                } else { icon.textContent = 'unfold_more'; }
+                }
             });
         }
         
         function generateEmailBody(data) {
-            // ALTERAÇÃO JAVASCRIPT: Ordem da coluna do pedido alterada no email
             let tableHtml = `<p>Segue o relatório de movimentações de mercadorias.</p><table border="1" cellpadding="7" cellspacing="0" style="border-collapse: collapse; width: 100%; font-family: sans-serif;"><thead><tr style="background-color: #f0f0f0;"><th>Nº Pedido</th><th>Data e Hora</th><th>Tipo</th><th>Origem/Destino</th><th>Produto</th><th>Qtd</th><th>Estado</th><th>NF</th><th>Série</th></tr></thead><tbody>`;
             data.forEach(mov => {
                 const dataRegistro = new Date(mov.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
@@ -426,7 +445,7 @@
             if (!th) return;
             const novaColuna = th.dataset.sortBy;
             if (sortState.column === novaColuna) { sortState.ascending = !sortState.ascending; } else { sortState.column = novaColuna; sortState.ascending = true; }
-            atualizarIconesDeOrdenacao();
+            atualizarEstiloDeOrdenacao();
             aplicarFiltrosEOrdenacao();
         });
 
@@ -455,7 +474,7 @@
             popularFiltrosDeData();
             await carregarDadosParaModal();
             await carregarMovimentacoesDoSupabase();
-            atualizarIconesDeOrdenacao();
+            atualizarEstiloDeOrdenacao();
         }
         init();
     });

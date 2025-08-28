@@ -13,6 +13,7 @@
             --accent-color: #007bff;
             --success-color: #28a745;
             --edit-color: #ffc107;
+            --danger-color: #dc3545;
             --background-color: #f8f9fa;
             --card-bg-color: #ffffff;
             --text-color-light: #6c757d;
@@ -31,10 +32,10 @@
         .actions-cell .dar-baixa-btn { color: var(--success-color); }
         .actions-cell .edit-baixa-btn { color: var(--edit-color); }
         .actions-cell .edit-pedido-btn { color: var(--edit-color); }
-        .actions-cell .cancel-btn { color: #dc3545; }
+        .actions-cell .cancel-btn { color: var(--danger-color); }
         .actions-cell .message-icon { font-size: 24px; cursor: pointer; }
         .actions-cell .message-icon.off { color: #adb5bd; }
-        .actions-cell .message-icon.lit { color: #dc3545; }
+        .actions-cell .message-icon.lit { color: var(--danger-color); }
         .actions-cell .dar-baixa-btn.disabled { color: #adb5bd; cursor: not-allowed; }
         .status-badge { padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 500; text-align: center; }
         .page-header { text-align: center; }
@@ -68,7 +69,9 @@
         .status-AtendidoParcialmente { background-color: var(--status-parcial-bg); color: var(--status-parcial-text); }
         .status-Cancelado { background-color: var(--status-cancelado-bg); color: var(--status-cancelado-text); }
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-container { background: #fff; border-radius: 8px; width: 90%; max-width: 800px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; max-height: 90vh; }
+        .modal-container { background: #fff; border-radius: 8px; width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; max-height: 90vh; }
+        .modal-container.details-modal { max-width: 800px; }
+        .modal-container.cancel-modal { max-width: 500px; }
         .modal-header { padding: 15px 25px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
         .modal-header h3 { margin: 0; font-size: 1.2em; }
         .modal-close-btn { background: none; border: none; cursor: pointer; font-size: 24px; }
@@ -81,18 +84,44 @@
         .btn-secondary { background-color: #6c757d; color: white; }
         .btn-primary { background-color: var(--accent-color); color: white; }
         .btn-success { background-color: var(--success-color); color: white; }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+        .form-group textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-family: 'Roboto', sans-serif; resize: vertical; min-height: 80px;}
         .detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;}
         .detail-item strong { display: block; color: #555; font-size: 0.9em; margin-bottom: 5px; }
         .detail-item span { font-size: 1em; color: #333; }
         .input-qtd-atendida { width: 70px; text-align: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; }
 
         @media print {
-            body > *:not(.printable-area) { display: none !important; }
-            .printable-area, .modal-overlay { display: block !important; position: static; background: none; }
-            .modal-container { box-shadow: none; max-width: 100%; width: 100%; border: none; margin: 0; max-height: none; overflow: visible; border-radius: 0;}
-            .modal-body { padding: 1.5cm; font-family: Arial, sans-serif; color: #000; }
-            .modal-footer, .modal-close-btn { display: none !important; }
-            .modal-header {
+            body > *:not(.printable-area),
+            .page-container {
+                display: none !important;
+            }
+            .printable-area, .printable-area .modal-overlay {
+                display: block !important;
+                position: static !important;
+                background: none !important;
+            }
+            .printable-area .modal-container {
+                box-shadow: none;
+                max-width: 100%;
+                width: 100%;
+                border: none;
+                margin: 0;
+                max-height: none;
+                overflow: visible;
+                border-radius: 0;
+            }
+            .printable-area .modal-body {
+                padding: 1.5cm;
+                font-family: Arial, sans-serif;
+                color: #000;
+            }
+            .printable-area .modal-footer, .printable-area .modal-close-btn {
+                display: none !important;
+            }
+            .printable-area .modal-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -100,17 +129,13 @@
                 padding: 0 0 15px 0;
                 margin-bottom: 20px;
             }
-            .modal-header > div:first-child { display: flex; align-items: center; }
-            .modal-logo { width: 50px; height: 50px; }
-            #modal-title { font-size: 1.4em; }
-            .modal-subtitle { font-size: 0.9em; color: #333 !important; }
-            .modal-header::after {
+            .printable-area .modal-header::after {
                 content: "Pedido Nº " attr(data-pedido-id);
                 font-size: 1.1em;
                 font-weight: bold;
                 align-self: flex-end;
             }
-            .detail-grid {
+            .printable-area .detail-grid {
                 grid-template-columns: 1fr 1fr;
                 gap: 10px;
                 border: 1px solid #ccc;
@@ -118,26 +143,7 @@
                 border-radius: 4px;
                 margin-bottom: 25px;
             }
-            .detail-item { font-size: 11pt; }
-            .detail-item strong { margin-bottom: 0; display: inline-block; width: 120px; font-weight: bold; }
-            .modal-body h4 {
-                margin-top: 30px;
-                border-bottom: 1px solid #ccc;
-                padding-bottom: 5px;
-                font-size: 1.2em;
-            }
-            .modal-body table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-            .modal-body th, .modal-body td { border: 1px solid #ccc; padding: 8px; }
-            .modal-body th { background-color: #f0f0f0; }
-            .input-qtd-atendida {
-                border: none; background: transparent; padding: 0; width: auto;
-                text-align: center; -moz-appearance: textfield; font-size: 10pt;
-            }
-            .input-qtd-atendida::-webkit-outer-spin-button,
-            .input-qtd-atendida::-webkit-inner-spin-button {
-                -webkit-appearance: none; margin: 0;
-            }
-            .signatures-block {
+            .printable-area .signatures-block {
                 margin-top: 80px;
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -145,7 +151,10 @@
                 text-align: center;
                 font-size: 11pt;
             }
-            .signatures-block > div { border-top: 1px solid #000; padding-top: 8px; }
+            .printable-area .signatures-block > div {
+                border-top: 1px solid #000;
+                padding-top: 8px;
+            }
         }
     </style>
 </head>
@@ -185,8 +194,7 @@
         </div>
     </div>
 
-    <div id="details-modal" class="modal-overlay">
-    </div>
+    <div id="modal-container-geral"></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -195,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const tableBody = document.getElementById('pedidos-table-body');
-    const modal = document.getElementById('details-modal');
+    const modalContainerGeneral = document.getElementById('modal-container-geral');
     const statusFilter = document.getElementById('status-filter');
     const searchFilter = document.getElementById('search-filter');
     const dateStartFilter = document.getElementById('date-start-filter');
@@ -259,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 acoesHtml += `<i class="material-icons edit-pedido-btn" data-id="${p.id}" title="Editar Pedido">edit</i>`;
                 acoesHtml += `<i class="material-icons cancel-btn" data-id="${p.id}" title="Cancelar Pedido">cancel</i><i class="material-icons message-icon off" title="Nenhum motivo de cancelamento">message</i>`;
             } else if (p.status === 'Cancelado') {
-                acoesHtml += `<i class="material-icons message-icon lit" data-id="${p.id}" title="Motivo do cancelamento: ${p.motivo_cancelamento || 'Não informado'}">message</i>`;
+                acoesHtml += `<i class="material-icons message-icon lit" data-id="${p.id}" data-motivo="${p.motivo_cancelamento || 'Não informado'}" title="Ver motivo do cancelamento">message</i>`;
             }
             
             tr.innerHTML = `
@@ -278,8 +286,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('kpi-atendidos').textContent = allPedidos.filter(p => p.status === 'Atendido' || p.status === 'Atendido Parcialmente').length;
         document.getElementById('kpi-cancelados').textContent = allPedidos.filter(p => p.status === 'Cancelado').length;
     }
+    
+    function fecharModalAtual() {
+        const modal = modalContainerGeneral.querySelector('.modal-overlay');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.remove();
+        }
+    }
 
     function renderizarFichaNoModal(data, mode = 'view') {
+        fecharModalAtual();
         currentPedidoData = data;
         const isBaixaMode = mode === 'baixa';
         
@@ -331,42 +348,44 @@ document.addEventListener('DOMContentLoaded', () => {
         const requisitanteNome = data.requisitante_nome || getLoggedUserName() || '-';
 
         const modalHtml = `
-            <div class="modal-container">
-                <div class="modal-header" data-pedido-id="${data.id}">
-                    <div>
-                        <img src="https://bixobvseaocmhljckskl.supabase.co/storage/v1/object/public/assets_publicos/logo-redonda-prefeitura.png" alt="Logo" class="modal-logo">
+            <div id="details-modal" class="modal-overlay" style="display: flex;">
+                <div class="modal-container details-modal">
+                    <div class="modal-header" data-pedido-id="${data.id}">
                         <div>
-                             <h3 id="modal-title">${title}</h3>
-                             <p class="modal-subtitle">${subtitle}</p>
+                            <img src="https://bixobvseaocmhljckskl.supabase.co/storage/v1/object/public/assets_publicos/logo-redonda-prefeitura.png" alt="Logo" class="modal-logo">
+                            <div>
+                                 <h3 id="modal-title">${title}</h3>
+                                 <p class="modal-subtitle">${subtitle}</p>
+                            </div>
                         </div>
+                        <button type="button" class="modal-close-btn">&times;</button>
                     </div>
-                    <button type="button" class="modal-close-btn">&times;</button>
-                </div>
-                <div class="modal-body" id="modal-body-content">
-                    <div class="detail-grid">
-                        <div class="detail-item"><strong>Data do Pedido:</strong> <span>${new Date(data.created_at).toLocaleString('pt-BR')}</span></div>
-                        <div class="detail-item"><strong>Setor Solicitante:</strong> <span>${data.setores.nome_setor}</span></div>
-                        <div class="detail-item"><strong>Requisitante:</strong> <span>${requisitanteNome}</span></div>
+                    <div class="modal-body">
+                        <div class="detail-grid">
+                            <div class="detail-item"><strong>Data do Pedido:</strong> <span>${new Date(data.created_at).toLocaleString('pt-BR')}</span></div>
+                            <div class="detail-item"><strong>Setor Solicitante:</strong> <span>${data.setores.nome_setor}</span></div>
+                            <div class="detail-item"><strong>Requisitante:</strong> <span>${requisitanteNome}</span></div>
+                        </div>
+                        <h4>Itens da Solicitação</h4>
+                        <table>
+                            <thead><tr>${tableHeaders}</tr></thead>
+                            <tbody>${itemsHtml || `<tr><td colspan="5">Nenhum item.</td></tr>`}</tbody>
+                        </table>
+                        ${signaturesHtml}
                     </div>
-                    <h4>Itens da Solicitação</h4>
-                    <table>
-                        <thead><tr>${tableHeaders}</tr></thead>
-                        <tbody>${itemsHtml || `<tr><td colspan="5">Nenhum item.</td></tr>`}</tbody>
-                    </table>
-                    ${signaturesHtml}
-                </div>
-                <div class="modal-footer" id="modal-footer-content">
-                    <button type="button" class="btn btn-primary" id="print-btn">Imprimir</button>
-                    ${isBaixaMode ? `<button type="button" class="btn btn-success" id="confirmar-saida-btn">Confirmar</button>` : ''}
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="print-btn">Imprimir</button>
+                        ${isBaixaMode ? `<button type="button" class="btn btn-success" id="confirmar-saida-btn">Confirmar</button>` : ''}
+                    </div>
                 </div>
             </div>
         `;
-        modal.innerHTML = modalHtml;
+        modalContainerGeneral.innerHTML = modalHtml;
     }
     
     async function abrirModal(pedidoId, mode) {
-        modal.style.display = 'flex';
-        modal.innerHTML = '<p style="color:white; background:rgba(0,0,0,0.5); padding:20px; border-radius:8px;">Carregando...</p>';
+        fecharModalAtual();
+        modalContainerGeneral.innerHTML = '<div class="modal-overlay" style="display:flex; color:white; font-size: 1.2em; align-items:center; justify-content:center;">Carregando...</div>';
         
         const { data, error } = await supabaseClient
             .from('historico_pedidos')
@@ -375,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .single();
 
         if (error) {
-            modal.innerHTML = `<p style="color:red; background:white; padding:20px; border-radius:8px;">Erro ao carregar detalhes: ${error.message}</p>`;
+            modalContainerGeneral.innerHTML = `<div class="modal-overlay" style="display:flex; align-items:center; justify-content:center;"><div style="background:white; padding:20px; border-radius:8px; color:red;">Erro ao carregar detalhes: ${error.message}</div></div>`;
             return;
         }
         renderizarFichaNoModal(data, mode);
@@ -398,7 +417,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const input = document.querySelector(`input[data-item-id='${item.id}']`);
                 const qtdAtendida = parseInt(input.value);
 
-                // ALTERAÇÃO 2: Validação para garantir que a quantidade não seja negativa
                 if (isNaN(qtdAtendida) || qtdAtendida < 0) {
                     throw new Error(`Quantidade inválida para o item "${item.produtos.descricao}".`);
                 }
@@ -409,16 +427,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalSolicitado += item.qtd_solicitada;
                 totalAtendido += qtdAtendida;
 
-                updatesItens.push({ 
-                    id: item.id,
-                    qtd_atendida: qtdAtendida 
-                });
+                updatesItens.push({ id: item.id, qtd_atendida: qtdAtendida });
                 
                 if (qtdAtendida > 0) {
                     movimentacoes.push({
                         produto_id: item.produto_id,
-                        // A quantidade é negativa para indicar uma SAÍDA no estoque. Isso é intencional.
-                        quantidade: -qtdAtendida,
+                        quantidade: qtdAtendida,
                         tipo_movimentacao: 'Saída',
                         observacao: `Saída referente ao Pedido Nº ${currentPedidoData.id}`,
                     });
@@ -448,9 +462,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (errorMovimentacao) throw errorMovimentacao;
             }
 
-            // ALTERAÇÃO 1: Lógica de status aprimorada
+            // ALTERAÇÃO 1: Lógica de status aprimorada e garantida
             let novoStatus;
-            if (totalAtendido <= 0) {
+            if (totalAtendido <= 0 && currentPedidoData.status === 'Pendente') {
                 novoStatus = 'Pendente';
             } else if (totalAtendido >= totalSolicitado) {
                 novoStatus = 'Atendido';
@@ -465,8 +479,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (errorPedido) throw errorPedido;
 
             alert('Baixa no pedido processada com sucesso!');
-            modal.style.display = 'none';
-            carregarPedidos(); // ALTERAÇÃO 5: Força a atualização da UI
+            fecharModalAtual();
+            carregarPedidos(); // Força a atualização da UI para refletir as mudanças
 
         } catch (error) {
             console.error('Erro ao processar baixa:', error);
@@ -477,38 +491,96 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ALTERAÇÃO 2: Lógica de cancelamento refeita com modal personalizado
+    function abrirModalCancelamento(id) {
+        fecharModalAtual();
+        const modalHtml = `
+            <div id="cancel-modal" class="modal-overlay" style="display: flex;">
+                <div class="modal-container cancel-modal">
+                    <header class="modal-header">
+                        <h3>Cancelar Pedido #${id}</h3>
+                        <button class="modal-close-btn">&times;</button>
+                    </header>
+                    <div class="modal-body">
+                        <form id="form-cancelamento">
+                            <p>Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.</p>
+                            <div class="form-group">
+                                <label for="motivo-cancelamento">Justificativa (obrigatório):</label>
+                                <textarea id="motivo-cancelamento" required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <footer class="modal-footer">
+                        <button type="submit" form="form-cancelamento" class="btn btn-danger">Sim, Cancelar</button>
+                    </footer>
+                </div>
+            </div>
+        `;
+        modalContainerGeneral.innerHTML = modalHtml;
 
-    async function handleCancel(id) {
-        if (confirm("Deseja realmente cancelar o pedido? Essa operação não poderá ser desfeita.")) {
-            const motivo = prompt("Informe o motivo do cancelamento:");
-            if (motivo && motivo.trim()) {
-                try {
-                    // ALTERAÇÃO 4: Deleta movimentações de estoque associadas ao pedido
-                    const { error: deleteError } = await supabaseClient
-                        .from('movimentacao_estoque')
-                        .delete()
-                        .eq('observacao', `Saída referente ao Pedido Nº ${id}`);
+        const form = document.getElementById('form-cancelamento');
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const motivo = document.getElementById('motivo-cancelamento').value;
+            handleCancel(id, motivo);
+        });
+    }
+    
+    // ALTERAÇÃO 2: Modal para exibir o motivo do cancelamento
+    function mostrarModalMotivo(motivo) {
+        fecharModalAtual();
+        const modalHtml = `
+             <div id="motivo-modal" class="modal-overlay" style="display: flex;">
+                <div class="modal-container cancel-modal">
+                    <header class="modal-header">
+                        <h3>Motivo do Cancelamento</h3>
+                        <button class="modal-close-btn">&times;</button>
+                    </header>
+                    <div class="modal-body">
+                        <p style="white-space: pre-wrap; word-wrap: break-word;">${motivo}</p>
+                    </div>
+                    <footer class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-close-btn">Fechar</button>
+                    </footer>
+                </div>
+            </div>
+        `;
+        modalContainerGeneral.innerHTML = modalHtml;
+    }
 
-                    if (deleteError) throw deleteError;
+    async function handleCancel(id, motivo) {
+        if (!motivo || !motivo.trim()) {
+            alert("A justificativa é obrigatória para cancelar.");
+            return;
+        }
+        
+        const btnConfirm = document.querySelector('#cancel-modal .btn-danger');
+        btnConfirm.disabled = true;
+        btnConfirm.textContent = 'Cancelando...';
 
-                    // Prossegue com o cancelamento do pedido
-                    const { error } = await supabaseClient
-                        .from('historico_pedidos')
-                        .update({ status: 'Cancelado', motivo_cancelamento: motivo.trim() })
-                        .eq('id', id);
-                    
-                    if (error) throw error;
+        try {
+            // Deleta movimentações de estoque associadas ao pedido
+            const { error: deleteError } = await supabaseClient
+                .from('movimentacao_estoque')
+                .delete()
+                .eq('observacao', `Saída referente ao Pedido Nº ${id}`);
+            if (deleteError) throw deleteError;
 
-                    alert("Pedido cancelado com sucesso!");
-                    carregarPedidos(); // ALTERAÇÃO 3: Força a atualização da UI
+            const { error } = await supabaseClient
+                .from('historico_pedidos')
+                .update({ status: 'Cancelado', motivo_cancelamento: motivo.trim() })
+                .eq('id', id);
+            if (error) throw error;
 
-                } catch (error) {
-                    console.error('Erro ao cancelar pedido:', error);
-                    alert(`Falha ao cancelar o pedido: ${error.message}`);
-                }
-            } else if (motivo !== null) {
-                alert("O motivo é obrigatório para cancelar.");
-            }
+            alert("Pedido cancelado com sucesso!");
+            fecharModalAtual();
+            carregarPedidos(); // Força a atualização da UI
+
+        } catch (error) {
+            console.error('Erro ao cancelar pedido:', error);
+            alert(`Falha ao cancelar o pedido: ${error.message}`);
+            btnConfirm.disabled = false;
+            btnConfirm.textContent = 'Sim, Cancelar';
         }
     }
     
@@ -552,25 +624,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = event.target.closest('i[data-id]');
         if (!target) return;
         const id = parseInt(target.dataset.id);
+
         if (target.classList.contains('view-btn')) {
             abrirModal(id, 'view');
         } else if (target.classList.contains('dar-baixa-btn') && !target.classList.contains('disabled')) {
             abrirModal(id, 'baixa');
-        } else if (target.classList.contains('edit-baixa-btn')) {
-            abrirModal(id, 'baixa');
-        } else if (target.classList.contains('edit-pedido-btn')) {
+        } else if (target.classList.contains('edit-baixa-btn') || target.classList.contains('edit-pedido-btn')) {
             abrirModal(id, 'baixa');
         } else if (target.classList.contains('cancel-btn')) {
-            handleCancel(id);
+            abrirModalCancelamento(id);
+        } else if (target.classList.contains('message-icon')) {
+            mostrarModalMotivo(target.dataset.motivo);
         }
     });
 
-    modal.addEventListener('click', (event) => {
+    modalContainerGeneral.addEventListener('click', (event) => {
         const target = event.target;
         if (target.classList.contains('modal-close-btn') || target.matches('.modal-overlay')) {
-            modal.style.display = 'none';
+            fecharModalAtual();
         } else if (target.id === 'print-btn') {
-            if (!currentPedidoData) return;
+            const printableArea = modalContainerGeneral.querySelector('.modal-overlay');
+            if (!currentPedidoData || !printableArea) return;
+            
             const originalTitle = document.title;
             const isBaixaMode = !!document.getElementById('confirmar-saida-btn');
             const prefix = isBaixaMode ? 'Pedido' : 'ResumoPedido';
@@ -578,14 +653,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const newTitle = `${prefix}${currentPedidoData.id}_${setor}_AlmoxarifadoSaude`;
             document.title = newTitle;
             
+            printableArea.classList.add('printable-area');
             document.body.classList.add('printable-area');
-            modal.classList.add('printable-area');
 
-            try {
-                window.print();
-            } finally {
+            try { window.print(); } 
+            finally {
+                printableArea.classList.remove('printable-area');
                 document.body.classList.remove('printable-area');
-                modal.classList.remove('printable-area');
                 document.title = originalTitle;
             }
         } else if (target.id === 'confirmar-saida-btn') {
@@ -594,8 +668,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && modal.style.display === 'flex') {
-            modal.style.display = 'none';
+        if (event.key === 'Escape' && modalContainerGeneral.querySelector('.modal-overlay')) {
+            fecharModalAtual();
         }
     });
     
@@ -632,7 +706,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { event: '*', schema: 'public', table: 'historico_pedidos' },
             (payload) => {
                 console.log('Alteração detectada na tabela de pedidos:', payload);
-                carregarPedidos();
+                if (document.querySelector('.modal-overlay') === null) {
+                    carregarPedidos();
+                }
             }
         )
         .subscribe();
@@ -640,3 +716,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
